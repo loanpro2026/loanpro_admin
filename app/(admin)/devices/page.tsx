@@ -1,0 +1,183 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+
+type DeviceRow = {
+  userId: string;
+  email?: string;
+  username?: string;
+  fullName?: string;
+  deviceId?: string;
+  deviceName?: string;
+  status?: string;
+  lastActive?: string;
+};
+
+export default function DevicesPage() {
+  const [rows, setRows] = useState<DeviceRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [updatingKey, setUpdatingKey] = useState('');
+
+  const load = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: '150', status });
+      if (search.trim()) params.set('search', search.trim());
+      const response = await fetch(`/api/devices?${params.toString()}`);
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Failed to fetch devices');
+      }
+      setRows(payload.data || []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : 'Failed to fetch devices');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
+
+  const updateDevice = async (row: DeviceRow, action: 'revoke' | 'approve_switch') => {
+    if (!row.deviceId) {
+      setError('Missing deviceId for selected device');
+      return;
+    }
+
+    const key = `${row.userId}:${row.deviceId}`;
+    setUpdatingKey(key);
+    setError('');
+    try {
+      const response = await fetch(`/api/devices/${encodeURIComponent(row.userId)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action,
+          deviceId: row.deviceId,
+          reason: action === 'revoke' ? 'Revoked from admin panel' : 'Switch approved from admin panel',
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Failed to update device');
+      }
+      await load();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : 'Failed to update device');
+    } finally {
+      setUpdatingKey('');
+    }
+  };
+
+  return (
+    <main className="space-y-6 p-8">
+      <header>
+        <h1 className="text-2xl font-semibold text-slate-900">Devices</h1>
+        <p className="mt-2 text-slate-600">Review active/pending devices and approve switch or revoke access.</p>
+      </header>
+
+      <section className="rounded-xl border border-slate-200 p-5">
+        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Filters</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-4">
+          <input
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            placeholder="Search user or device"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <select
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="pending">Pending</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button
+            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            type="button"
+            onClick={() => void load()}
+          >
+            Search
+          </button>
+        </div>
+      </section>
+
+      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+
+      <section className="rounded-xl border border-slate-200">
+        <div className="border-b border-slate-200 px-5 py-3">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Device records</h2>
+        </div>
+
+        {loading ? (
+          <p className="px-5 py-4 text-sm text-slate-500">Loading devices...</p>
+        ) : rows.length === 0 ? (
+          <p className="px-5 py-4 text-sm text-slate-500">No devices found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
+                <tr>
+                  <th className="px-5 py-3">User</th>
+                  <th className="px-5 py-3">Device</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3">Last active</th>
+                  <th className="px-5 py-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row) => {
+                  const key = `${row.userId}:${row.deviceId || 'unknown'}`;
+                  return (
+                    <tr key={key} className="border-t border-slate-200">
+                      <td className="px-5 py-3">
+                        <div className="font-medium text-slate-800">{row.fullName || row.username || row.userId}</div>
+                        <div className="text-xs text-slate-500">{row.email || row.userId}</div>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="text-slate-800">{row.deviceName || '-'}</div>
+                        <div className="text-xs text-slate-500">{row.deviceId || '-'}</div>
+                      </td>
+                      <td className="px-5 py-3 text-slate-700">{row.status || '-'}</td>
+                      <td className="px-5 py-3 text-slate-700">{row.lastActive ? new Date(row.lastActive).toLocaleString() : '-'}</td>
+                      <td className="px-5 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={updatingKey === key}
+                            onClick={() => void updateDevice(row, 'revoke')}
+                            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Revoke
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingKey === key || row.status !== 'pending'}
+                            onClick={() => void updateDevice(row, 'approve_switch')}
+                            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Approve Switch
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </main>
+  );
+}

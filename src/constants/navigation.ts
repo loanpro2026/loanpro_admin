@@ -1,0 +1,15 @@
+export const ADMIN_NAV_ITEMS = [
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard' },
+  { key: 'users', label: 'Users', href: '/users' },
+  { key: 'subscriptions', label: 'Subscriptions', href: '/subscriptions' },
+  { key: 'payments', label: 'Payments', href: '/payments' },
+  { key: 'devices', label: 'Devices', href: '/devices' },
+  { key: 'support', label: 'Support', href: '/support/tickets' },
+  { key: 'releases', label: 'Releases', href: '/releases' },
+  { key: 'integrations', label: 'Integrations', href: '/integrations' },
+  { key: 'analytics', label: 'Analytics', href: '/analytics' },
+  { key: 'team', label: 'Team', href: '/team' },
+  { key: 'roles', label: 'Roles', href: '/roles' },
+  { key: 'audit-logs', label: 'Audit Logs', href: '/audit-logs' },
+  { key: 'settings', label: 'Settings', href: '/settings' },
+] as const;
