@@ -17,7 +17,9 @@ export type AdminSettingsDocument = {
   features: {
     enableContactAutoAssign: boolean;
     enableRefundQueueAlerts: boolean;
-    enableReleaseReadinessChecks: boolean;
+  };
+  notifications: {
+    retentionDays: number;
   };
   updatedAt: Date;
   updatedBy: string;
@@ -28,6 +30,7 @@ type SettingsPatch = {
   billing?: Partial<AdminSettingsDocument['billing']>;
   security?: Partial<AdminSettingsDocument['security']>;
   features?: Partial<AdminSettingsDocument['features']>;
+  notifications?: Partial<AdminSettingsDocument['notifications']>;
 };
 
 const DEFAULT_SETTINGS: Omit<AdminSettingsDocument, 'updatedAt' | 'updatedBy'> = {
@@ -47,7 +50,9 @@ const DEFAULT_SETTINGS: Omit<AdminSettingsDocument, 'updatedAt' | 'updatedBy'> =
   features: {
     enableContactAutoAssign: false,
     enableRefundQueueAlerts: true,
-    enableReleaseReadinessChecks: true,
+  },
+  notifications: {
+    retentionDays: 14,
   },
 };
 
@@ -84,10 +89,9 @@ function normalizeSettings(doc: Partial<AdminSettingsDocument> | null): AdminSet
         typeof doc?.features?.enableRefundQueueAlerts === 'boolean'
           ? doc.features.enableRefundQueueAlerts
           : DEFAULT_SETTINGS.features.enableRefundQueueAlerts,
-      enableReleaseReadinessChecks:
-        typeof doc?.features?.enableReleaseReadinessChecks === 'boolean'
-          ? doc.features.enableReleaseReadinessChecks
-          : DEFAULT_SETTINGS.features.enableReleaseReadinessChecks,
+    },
+    notifications: {
+      retentionDays: Number(doc?.notifications?.retentionDays ?? DEFAULT_SETTINGS.notifications.retentionDays),
     },
     updatedAt: doc?.updatedAt instanceof Date ? doc.updatedAt : now,
     updatedBy: String(doc?.updatedBy ?? 'system'),
@@ -122,9 +126,31 @@ export async function updateAdminSettings(patch: SettingsPatch, actorEmail: stri
       ...before.features,
       ...(patch.features || {}),
     },
+    notifications: {
+      ...before.notifications,
+      ...(patch.notifications || {}),
+    },
     updatedAt: new Date(),
     updatedBy: actorEmail,
   });
+
+  const beforeComparable = JSON.stringify({
+    support: before.support,
+    billing: before.billing,
+    security: before.security,
+    features: before.features,
+  });
+  const afterComparable = JSON.stringify({
+    support: next.support,
+    billing: next.billing,
+    security: next.security,
+    features: next.features,
+    notifications: next.notifications,
+  });
+
+  if (beforeComparable === afterComparable) {
+    return { before, after: before, changed: false };
+  }
 
   await db.collection<AdminSettingsDocument>('admin_settings').updateOne(
     { key: 'global' },
@@ -137,5 +163,5 @@ export async function updateAdminSettings(patch: SettingsPatch, actorEmail: stri
     { upsert: true }
   );
 
-  return { before, after: next };
+  return { before, after: next, changed: true };
 }

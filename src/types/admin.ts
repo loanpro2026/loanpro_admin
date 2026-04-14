@@ -1,4 +1,5 @@
 import type { Permission, RoleKey } from '@/types/rbac';
+import type { ObjectId } from 'mongodb';
 
 export type AdminUserStatus = 'active' | 'inactive' | 'deactivated';
 
@@ -51,4 +52,25 @@ export type AuditLogDocument = {
   after?: Record<string, unknown> | null;
   metadata?: Record<string, unknown>;
   createdAt: Date;
+};
+
+export type AdminNotificationDocument = {
+  _id?: ObjectId | string;
+  actor: {
+    adminUserId: string;
+    clerkUserId: string;
+    email: string;
+    role: RoleKey;
+  };
+  action: string;
+  resource: string;
+  resourceId?: string;
+  reason?: string;
+  before?: Record<string, unknown> | null;
+  after?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown>;
+  message: string;
+  readBy?: string[];
+  createdAt: Date;
+  expiresAt: Date;
 };

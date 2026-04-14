@@ -6,6 +6,7 @@ import { parseJsonBody } from '@/server/api/request';
 import { writeAuditLog } from '@/server/services/audit-log';
 import { ALL_PERMISSIONS } from '@/lib/rbac/permissions';
 import type { Permission } from '@/types/rbac';
+import { invalidateCacheByPrefix } from '@/server/services/response-cache';
 
 const updateRoleSchema = z.object({
   name: z.string().min(2).max(80).optional(),
@@ -55,6 +56,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ r
     after: updatedRole as unknown as Record<string, unknown>,
   });
 
+  invalidateCacheByPrefix('roles:list:');
+
   return NextResponse.json({ success: true, data: updatedRole });
 }
 
@@ -90,6 +93,8 @@ export async function DELETE(request: NextRequest, context: { params: Promise<{ 
     resourceId: params.roleKey,
     reason,
   });
+
+  invalidateCacheByPrefix('roles:list:');
 
   return NextResponse.json({ success: true });
 }

@@ -5,6 +5,7 @@ import { parseJsonBody } from '@/server/api/request';
 import { hasPermission } from '@/lib/rbac/permissions';
 import { getPaymentById, updatePaymentById } from '@/server/repositories/payments';
 import { writeAuditLog } from '@/server/services/audit-log';
+import { invalidateCacheByPrefixes } from '@/server/services/response-cache';
 
 const patchSchema = z.object({
   action: z.enum(['refund_request', 'refund_approve', 'reconcile']),
@@ -125,6 +126,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ p
       action: parsed.data.action,
     },
   });
+
+  invalidateCacheByPrefixes(['payments:list:', 'dashboard:']);
 
   return NextResponse.json({ success: true, data: updated });
 }

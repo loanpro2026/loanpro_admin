@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type DeviceRow = {
   userId: string;
@@ -77,23 +78,33 @@ export default function DevicesPage() {
   };
 
   return (
-    <main className="space-y-6 p-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Devices</h1>
-        <p className="mt-2 text-slate-600">Review active/pending devices and approve switch or revoke access.</p>
+    <main className="space-y-6 p-6 sm:p-8">
+      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div>
+          <span className="admin-chip">Device trust</span>
+          <h1 className="admin-title mt-4">Devices</h1>
+          <p className="admin-subtitle">Review active and pending devices, then approve switches or revoke access.</p>
+        </div>
+        <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Loaded records</p>
+          <p className="mt-2 font-display text-xl font-semibold text-slate-950">{rows.length}</p>
+        </div>
       </header>
 
-      <section className="rounded-xl border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Filters</h2>
+      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="devices" /></span>
+          <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search user or device"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             value={status}
             onChange={(event) => setStatus(event.target.value)}
           >
@@ -103,7 +114,7 @@ export default function DevicesPage() {
             <option value="inactive">Inactive</option>
           </select>
           <button
-            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
             type="button"
             onClick={() => void load()}
           >
@@ -112,11 +123,11 @@ export default function DevicesPage() {
         </div>
       </section>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="rounded-xl border border-slate-200">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Device records</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Device records</h2>
         </div>
 
         {loading ? (
@@ -125,7 +136,7 @@ export default function DevicesPage() {
           <p className="px-5 py-4 text-sm text-slate-500">No devices found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">User</th>
@@ -139,7 +150,7 @@ export default function DevicesPage() {
                 {rows.map((row) => {
                   const key = `${row.userId}:${row.deviceId || 'unknown'}`;
                   return (
-                    <tr key={key} className="border-t border-slate-200">
+                      <tr key={key} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
                       <td className="px-5 py-3">
                         <div className="font-medium text-slate-800">{row.fullName || row.username || row.userId}</div>
                         <div className="text-xs text-slate-500">{row.email || row.userId}</div>
@@ -156,7 +167,7 @@ export default function DevicesPage() {
                             type="button"
                             disabled={updatingKey === key}
                             onClick={() => void updateDevice(row, 'revoke')}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Revoke
                           </button>
@@ -164,7 +175,7 @@ export default function DevicesPage() {
                             type="button"
                             disabled={updatingKey === key || row.status !== 'pending'}
                             onClick={() => void updateDevice(row, 'approve_switch')}
-                            className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             Approve Switch
                           </button>

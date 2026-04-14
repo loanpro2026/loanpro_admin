@@ -5,7 +5,6 @@
 - `admin_ops`
 - `support_agent`
 - `finance_admin`
-- `release_manager`
 - `analyst`
 - `viewer`
 
@@ -16,7 +15,6 @@
 - `devices`: `read`, `bind`, `revoke`, `switch_approve`
 - `support`: `read`, `reply`, `assign`, `close`, `escalate`
 - `contact`: `read`, `assign`, `close`, `export`
-- `releases`: `read`, `publish`, `rollback`, `promote`
 - `integrations`: `read`, `test`, `reconfigure`
 - `team`: `read`, `invite`, `role_assign`, `deactivate`
 - `roles`: `read`, `create`, `update`, `delete`

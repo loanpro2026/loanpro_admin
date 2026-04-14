@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+import { auth } from '@clerk/nextjs/server';
 import { getAdminSession } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/permissions';
 import type { Permission } from '@/types/rbac';
@@ -6,7 +7,8 @@ import type { Permission } from '@/types/rbac';
 export async function requireAdminSession() {
   const session = await getAdminSession();
   if (!session) {
-    redirect('/sign-in');
+    const authState = await auth();
+    redirect(authState.userId ? '/unauthorized' : '/sign-in');
   }
   return session;
 }

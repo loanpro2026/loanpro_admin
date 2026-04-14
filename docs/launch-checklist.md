@@ -17,7 +17,7 @@
 ## Operations
 - [ ] Integration health checks operational
 - [ ] Integrations usage and limits page validated (GA, Razorpay, Brevo, queues)
-- [ ] Payment/release high-risk action confirmation implemented
+- [ ] Payment high-risk action confirmation implemented
 - [ ] Support/contact admin workflows smoke-tested
 - [ ] Analytics dashboards validated
 

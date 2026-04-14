@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type ProfilePayload = {
   clerkUserId: string;
@@ -86,103 +87,146 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="space-y-6 p-8">
+    <main className="space-y-6 p-6 sm:p-8">
       <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Profile</h1>
-        <p className="mt-2 text-slate-600">Manage your admin identity and notification preferences.</p>
+        <span className="admin-chip">Account center</span>
+        <h1 className="admin-title mt-4">Profile</h1>
+        <p className="admin-subtitle">Manage your admin identity, preferences, and notification settings.</p>
       </header>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
-      {success ? <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">{success}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
+      {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
 
       {loading ? (
-        <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">Loading profile...</p>
+        <p className="admin-surface px-5 py-4 text-sm text-slate-500">Loading profile...</p>
       ) : profile ? (
-        <>
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <article className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Email</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{profile.email}</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Role</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{profile.role}</p>
-            </article>
-            <article className="rounded-xl border border-slate-200 bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">MFA Policy</p>
-              <p className="mt-2 text-sm font-medium text-slate-900">{profile.mfaEnforced ? 'Enforced' : 'Optional'}</p>
-            </article>
-          </section>
-
-          <form className="space-y-5 rounded-xl border border-slate-200 bg-white p-5" onSubmit={save}>
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Preferences</h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Display Name</span>
-                <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  required
-                />
-              </label>
-              <label className="space-y-1">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Timezone</span>
-                <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  value={timezone}
-                  onChange={(event) => setTimezone(event.target.value)}
-                  required
-                  placeholder="Asia/Kolkata"
-                />
-              </label>
-              <label className="space-y-1 md:col-span-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notification Email</span>
-                <input
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                  type="email"
-                  value={notificationEmail}
-                  onChange={(event) => setNotificationEmail(event.target.value)}
-                  required
-                />
-              </label>
-              <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700 md:col-span-2">
-                <input
-                  type="checkbox"
-                  checked={emailNotificationsEnabled}
-                  onChange={(event) => setEmailNotificationsEnabled(event.target.checked)}
-                />
-                Receive admin operational notifications by email
-              </label>
+        <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+          <section className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-brand-900 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+            <div className="flex items-center gap-4">
+              <div className="flex h-18 w-18 items-center justify-center rounded-[28px] bg-white/10 text-2xl font-semibold backdrop-blur">
+                {String(profile.displayName || profile.email)
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0]?.toUpperCase() || '')
+                  .join('') || 'A'}
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65">Admin profile</p>
+                <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight">{profile.displayName}</h2>
+                <p className="mt-1 text-sm text-white/70">{profile.email}</p>
+              </div>
             </div>
 
-            <div className="flex gap-3">
-              <button
-                type="submit"
-                disabled={saving}
-                className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {saving ? 'Saving...' : 'Save Preferences'}
-              </button>
-              <button
-                type="button"
-                onClick={() => void load()}
-                disabled={saving}
-                className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Reset
-              </button>
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {[
+                ['Role', profile.role],
+                ['MFA', profile.mfaEnforced ? 'Enforced' : 'Optional'],
+                ['Timezone', timezone],
+                ['Email alerts', emailNotificationsEnabled ? 'Enabled' : 'Disabled'],
+              ].map(([label, value]) => (
+                <article key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">{label}</p>
+                  <p className="mt-2 font-display text-lg font-semibold">{value}</p>
+                </article>
+              ))}
             </div>
-          </form>
 
-          <section className="rounded-xl border border-slate-200 bg-white p-5">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Account Activity</h2>
-            <p className="mt-2 text-sm text-slate-700">Last login: {profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString() : 'Not available'}</p>
-            <p className="mt-1 text-sm text-slate-700">Account created: {profile.createdAt ? new Date(profile.createdAt).toLocaleString() : 'Not available'}</p>
+            <div className="mt-8 rounded-[24px] border border-white/10 bg-white/5 p-4 text-sm text-white/80">
+              <p className="font-semibold text-white">Activity</p>
+              <p className="mt-2">Last login: {profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString() : 'Not available'}</p>
+              <p className="mt-1">Account created: {profile.createdAt ? new Date(profile.createdAt).toLocaleString() : 'Not available'}</p>
+            </div>
           </section>
-        </>
+
+          <section className="space-y-5">
+            <form className="space-y-5 rounded-[28px] border border-slate-200 bg-white/85 p-6 shadow-sm" onSubmit={save}>
+              <div className="flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+                  <AdminIcon name="profile" />
+                </span>
+                <div>
+                  <h2 className="font-display text-xl font-semibold text-slate-950">Preferences</h2>
+                  <p className="text-sm text-slate-500">Personalize how you work inside the admin panel.</p>
+                </div>
+              </div>
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="space-y-1 md:col-span-2">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Display Name</span>
+                  <input
+                    className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition hover:border-brand-200 focus:border-brand-400"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Timezone</span>
+                  <input
+                    className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition hover:border-brand-200 focus:border-brand-400"
+                    value={timezone}
+                    onChange={(event) => setTimezone(event.target.value)}
+                    required
+                    placeholder="Asia/Kolkata"
+                  />
+                </label>
+                <label className="space-y-1">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notification Email</span>
+                  <input
+                    className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm shadow-sm transition hover:border-brand-200 focus:border-brand-400"
+                    type="email"
+                    value={notificationEmail}
+                    onChange={(event) => setNotificationEmail(event.target.value)}
+                    required
+                  />
+                </label>
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 md:col-span-2">
+                  <input
+                    type="checkbox"
+                    checked={emailNotificationsEnabled}
+                    onChange={(event) => setEmailNotificationsEnabled(event.target.checked)}
+                  />
+                  Receive admin operational notifications by email
+                </label>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="admin-focus inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {saving ? 'Saving...' : 'Save Preferences'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void load()}
+                  disabled={saving}
+                  className="admin-focus rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Reset
+                </button>
+              </div>
+            </form>
+
+            <section className="rounded-[28px] border border-slate-200 bg-white/85 p-6 shadow-sm">
+              <h2 className="font-display text-xl font-semibold text-slate-950">Account Activity</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ['Last login', profile.lastLoginAt ? new Date(profile.lastLoginAt).toLocaleString() : 'Not available'],
+                  ['Account created', profile.createdAt ? new Date(profile.createdAt).toLocaleString() : 'Not available'],
+                ].map(([label, value]) => (
+                  <article key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                    <p className="mt-2 text-sm text-slate-700">{value}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </section>
+        </div>
       ) : (
-        <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">Profile data not available.</p>
+        <p className="admin-surface px-5 py-4 text-sm text-slate-500">Profile data not available.</p>
       )}
     </main>
   );

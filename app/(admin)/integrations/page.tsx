@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type IntegrationRecord = {
   key: string;
@@ -95,45 +96,42 @@ export default function IntegrationsPage() {
   }, [payload]);
 
   return (
-    <main className="space-y-6 p-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
+    <main className="space-y-6 p-6 sm:p-8">
+      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">Integrations</h1>
-          <p className="mt-2 text-slate-600">Operational health matrix for third-party and platform dependencies.</p>
+          <span className="admin-chip">Dependency health</span>
+          <h1 className="admin-title mt-4">Integrations</h1>
+          <p className="admin-subtitle">Operational health matrix for third-party and platform dependencies.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
+        <button type="button" onClick={() => void load()} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5">
           Run Health Check
         </button>
       </header>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-xl border border-slate-200 bg-white p-5">
+        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Integrations</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{summary.total}</p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-5">
+        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Healthy</p>
           <p className="mt-2 text-2xl font-semibold text-emerald-700">{summary.healthy}</p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-5">
+        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Degraded</p>
           <p className="mt-2 text-2xl font-semibold text-amber-700">{summary.degraded}</p>
         </article>
-        <article className="rounded-xl border border-slate-200 bg-white p-5">
+        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Missing Config</p>
           <p className="mt-2 text-2xl font-semibold text-slate-700">{summary.missing}</p>
         </article>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Health Matrix</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Health Matrix</h2>
         </div>
 
         {loading ? (
@@ -142,7 +140,7 @@ export default function IntegrationsPage() {
           <p className="px-5 py-4 text-sm text-slate-500">No integration data available.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Integration</th>
@@ -153,7 +151,7 @@ export default function IntegrationsPage() {
               </thead>
               <tbody>
                 {payload.data.map((record) => (
-                  <tr key={record.key} className="border-t border-slate-200">
+                  <tr key={record.key} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
                     <td className="px-5 py-3 font-medium text-slate-800">{record.label}</td>
                     <td className="px-5 py-3">
                       <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeClass(record.status)}`}>
@@ -170,9 +168,9 @@ export default function IntegrationsPage() {
         )}
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Usage and Limits</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Usage and Limits</h2>
         </div>
 
         {loading ? (
@@ -181,7 +179,7 @@ export default function IntegrationsPage() {
           <p className="px-5 py-4 text-sm text-slate-500">No usage data available.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
+            <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Service</th>

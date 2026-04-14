@@ -7,10 +7,11 @@ import { parseJsonBody } from '@/server/api/request';
 import { createTeamInvite } from '@/server/repositories/team';
 import { writeAuditLog } from '@/server/services/audit-log';
 import type { RoleKey } from '@/types/rbac';
+import { invalidateCacheByPrefix } from '@/server/services/response-cache';
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['super_admin', 'admin_ops', 'support_agent', 'finance_admin', 'release_manager', 'analyst', 'viewer']),
+  role: z.enum(['super_admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']),
   reason: z.string().min(3).max(240),
 });
 
@@ -71,6 +72,8 @@ export async function POST(request: NextRequest) {
       clerkInvitationId,
     },
   });
+
+  invalidateCacheByPrefix('team:list:');
 
   return NextResponse.json(
     {

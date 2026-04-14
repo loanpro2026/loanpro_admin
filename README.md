@@ -17,7 +17,7 @@ Clean-slate admin control plane project for `admin.loanpro.tech`.
 2. Team and roles: invite flow, permission management, audit logs.
 3. Core operations: users, subscriptions, devices, support/contact.
 4. Finance and analytics: payments, reconciliation, dashboards.
-5. Hardening and release: observability, incident handling, production rollout.
+5. Hardening and rollout: observability, incident handling, production rollout.
 
 ## Key Folders
 - `app`: route entry points and API handlers.

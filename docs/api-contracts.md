@@ -37,12 +37,10 @@
 - `GET /api/support/contact-requests`: contact queue.
 - `PATCH /api/support/contact-requests/:id`: assign/close.
 
-## Integrations, Releases, Analytics
+## Integrations and Analytics
 - `GET /api/integrations/health`: integration health matrix.
 - `GET /api/integrations/usage`: provider/queue usage and configured limits.
 - `GET /api/status/overview`: system status with queue pressure summary.
-- `GET /api/releases`: releases list and status.
-- `PATCH /api/releases/:id`: publish/promote/rollback.
 - `GET /api/analytics/kpis`: high-level KPIs.
 
 ## Audit and Settings
@@ -54,4 +52,4 @@
 - Every mutation endpoint requires permission checks.
 - Every mutation writes an audit log event with actor, action, reason, and before/after snapshots.
 - High-risk actions require reason and explicit confirmation.
-- Reason is mandatory for users/team/roles/subscriptions/releases/payment-support-contact high-risk mutations.
+- Reason is mandatory for users/team/roles/subscriptions/payment-support-contact high-risk mutations.

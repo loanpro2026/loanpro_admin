@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { getEnv } from '@/config/env';
-import { getAdminDb } from '@/lib/db/mongo';
+import { getAdminDb, getSupportDb } from '@/lib/db/mongo';
+import { countOpenContactRequests, countOpenSupportTickets } from '@/server/repositories/support-collections';
 
 export type UsageHealthStatus = 'healthy' | 'degraded' | 'missing';
 export type UsageSource = 'live-api' | 'local-aggregate' | 'config-only';
@@ -125,9 +126,14 @@ async function getGoogleAccessToken(serviceAccountEmail: string, privateKey: str
 
 async function getGoogleAnalyticsUsage() {
   const env = getEnv();
-  const propertyId = String(env.GOOGLE_ANALYTICS_PROPERTY_ID || '').trim();
+  const propertyId = String(env.GOOGLE_ANALYTICS_PROPERTY_ID || '').trim().replace(/^properties\//i, '');
   const serviceAccountEmail = String(env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '').trim();
-  const privateKey = String(env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').replace(/\\n/g, '\n').trim();
+  const privateKeyRaw = String(env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY || '').trim();
+  const privateKeyUnquoted =
+    privateKeyRaw.startsWith('"') && privateKeyRaw.endsWith('"')
+      ? privateKeyRaw.slice(1, -1)
+      : privateKeyRaw;
+  const privateKey = privateKeyUnquoted.replace(/\\n/g, '\n').trim();
   const gaEventLimit = toNumberOrNull(env.ADMIN_LIMIT_GA_MONTHLY_EVENTS);
 
   if (!propertyId || !serviceAccountEmail || !privateKey) {
@@ -372,12 +378,10 @@ async function getBrevoUsage() {
 
 async function getSupportQueueUsage() {
   const env = getEnv();
-  const db = await getAdminDb();
+  const db = await getSupportDb();
   const openLimit = toNumberOrNull(env.ADMIN_LIMIT_SUPPORT_OPEN_TICKETS);
 
-  const usage = await db.collection('supporttickets').countDocuments({
-    status: { $in: ['open', 'in-progress'] },
-  });
+  const usage = await countOpenSupportTickets(db);
 
   return buildRecord({
     key: 'support_queue',
@@ -394,12 +398,10 @@ async function getSupportQueueUsage() {
 
 async function getContactQueueUsage() {
   const env = getEnv();
-  const db = await getAdminDb();
+  const db = await getSupportDb();
   const openLimit = toNumberOrNull(env.ADMIN_LIMIT_CONTACT_OPEN_REQUESTS);
 
-  const usage = await db.collection('contactrequests').countDocuments({
-    status: { $in: ['new', 'follow-up', 'called'] },
-  });
+  const usage = await countOpenContactRequests(db);
 
   return buildRecord({
     key: 'contact_queue',

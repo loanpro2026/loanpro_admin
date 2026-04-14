@@ -5,9 +5,13 @@ export type PaymentListFilters = {
   search?: string;
   status?: string;
   limit?: number;
+  skip?: number;
+  sortBy?: 'createdAt' | 'updatedAt' | 'amount' | 'status';
+  sortDir?: 'asc' | 'desc';
 };
 
 const SUCCESS_STATUS_REGEX = /^(completed|captured|success|paid)$/i;
+const FAILED_STATUS_REGEX = /^(failed|failure|error|declined)$/i;
 
 function toSafeRegex(search: string) {
   return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
@@ -23,12 +27,26 @@ function buildStatusFilter(status: string | undefined) {
     return { $regex: SUCCESS_STATUS_REGEX };
   }
 
+  if (normalized === 'failed') {
+    return { $regex: FAILED_STATUS_REGEX };
+  }
+
   return { $regex: new RegExp(`^${normalized}$`, 'i') };
+}
+
+function buildSortStage(sortBy: PaymentListFilters['sortBy'], sortDir: PaymentListFilters['sortDir']) {
+  const direction = sortDir === 'asc' ? 1 : -1;
+  if (sortBy === 'updatedAt') return { updatedAt: direction };
+  if (sortBy === 'amount') return { amount: direction };
+  if (sortBy === 'status') return { status: direction };
+  return { createdAt: direction };
 }
 
 export async function listPayments(filters: PaymentListFilters) {
   const db = await getAdminDb();
   const limit = Math.min(200, Math.max(1, Number(filters.limit || 50)));
+  const skip = Math.max(0, Number(filters.skip || 0));
+  const sort = buildSortStage(filters.sortBy, filters.sortDir);
   const statusFilter = buildStatusFilter(filters.status);
 
   const match: Record<string, unknown> = {};
@@ -50,7 +68,7 @@ export async function listPayments(filters: PaymentListFilters) {
       }
     : {};
 
-  return db
+  const rows = await db
     .collection('payments')
     .aggregate([
       { $match: match },
@@ -85,10 +103,20 @@ export async function listPayments(filters: PaymentListFilters) {
         },
       },
       { $match: searchMatch },
-      { $sort: { createdAt: -1 } },
-      { $limit: limit },
+      {
+        $facet: {
+          items: [{ $sort: sort }, { $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
     ])
     .toArray();
+
+  const first = rows[0] as { items?: unknown[]; totalCount?: Array<{ count?: number }> } | undefined;
+  return {
+    items: Array.isArray(first?.items) ? first?.items : [],
+    total: Number(first?.totalCount?.[0]?.count || 0),
+  };
 }
 
 export async function getPaymentById(id: string) {

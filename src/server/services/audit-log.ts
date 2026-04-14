@@ -1,8 +1,9 @@
 import { getAdminDb } from '@/lib/db/mongo';
+import { createNotificationFromEvent } from '@/server/services/notifications';
 import type { AdminSession } from '@/lib/auth/session';
 import type { AuditLogDocument } from '@/types/admin';
 
-type WriteAuditLogInput = {
+export type WriteAuditLogInput = {
   actor: AdminSession;
   action: string;
   resource: string;
@@ -33,4 +34,11 @@ export async function writeAuditLog(input: WriteAuditLogInput) {
   };
 
   await db.collection<AuditLogDocument>('admin_audit_logs').insertOne(event);
+
+  try {
+    await createNotificationFromEvent(input);
+  } catch (error) {
+    // Notification writes should never block primary operations.
+    console.error('[notifications] Failed to create notification from audit event', error);
+  }
 }

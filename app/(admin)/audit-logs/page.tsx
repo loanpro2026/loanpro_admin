@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type AuditLogRecord = {
   _id?: string;
@@ -16,21 +17,31 @@ type AuditLogRecord = {
 };
 
 export default function AuditLogsPage() {
+  const STORAGE_KEY = 'lp_admin_audit_logs_table_v1';
   const [rows, setRows] = useState<AuditLogRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionFilter, setActionFilter] = useState('');
   const [resourceFilter, setResourceFilter] = useState('');
   const [actorEmailFilter, setActorEmailFilter] = useState('');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [exporting, setExporting] = useState(false);
+  const [skip, setSkip] = useState(0);
+  const [limit, setLimit] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({ limit: String(limit), skip: String(skip) });
       if (actionFilter.trim()) params.set('action', actionFilter.trim());
       if (resourceFilter.trim()) params.set('resource', resourceFilter.trim());
       if (actorEmailFilter.trim()) params.set('actorEmail', actorEmailFilter.trim().toLowerCase());
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
 
       const response = await fetch(`/api/audit-logs?${params.toString()}`);
       const payload = await response.json();
@@ -40,6 +51,8 @@ export default function AuditLogsPage() {
       }
 
       setRows(payload.data || []);
+      setTotal(Number(payload?.meta?.total || 0));
+      setHasMore(Boolean(payload?.meta?.hasMore));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to load audit logs');
     } finally {
@@ -48,52 +61,170 @@ export default function AuditLogsPage() {
   };
 
   useEffect(() => {
-    void load();
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        actionFilter?: string;
+        resourceFilter?: string;
+        actorEmailFilter?: string;
+        dateFrom?: string;
+        dateTo?: string;
+        limit?: number;
+      };
+      if (typeof parsed.actionFilter === 'string') setActionFilter(parsed.actionFilter);
+      if (typeof parsed.resourceFilter === 'string') setResourceFilter(parsed.resourceFilter);
+      if (typeof parsed.actorEmailFilter === 'string') setActorEmailFilter(parsed.actorEmailFilter);
+      if (typeof parsed.dateFrom === 'string') setDateFrom(parsed.dateFrom);
+      if (typeof parsed.dateTo === 'string') setDateTo(parsed.dateTo);
+      if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
+    } catch {
+      // Ignore invalid saved preferences
+    }
   }, []);
 
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ actionFilter, resourceFilter, actorEmailFilter, dateFrom, dateTo, limit })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [actionFilter, resourceFilter, actorEmailFilter, dateFrom, dateTo, limit]);
+
+  useEffect(() => {
+    void load();
+  }, [skip, limit]);
+
+  const exportCsv = async () => {
+    setExporting(true);
+    setError('');
+    try {
+      const params = new URLSearchParams({ limit: '1000' });
+      if (actionFilter.trim()) params.set('action', actionFilter.trim());
+      if (resourceFilter.trim()) params.set('resource', resourceFilter.trim());
+      if (actorEmailFilter.trim()) params.set('actorEmail', actorEmailFilter.trim().toLowerCase());
+      if (dateFrom) params.set('dateFrom', dateFrom);
+      if (dateTo) params.set('dateTo', dateTo);
+
+      const response = await fetch(`/api/audit-logs/export?${params.toString()}`);
+      if (!response.ok) {
+        let message = 'Failed to export audit logs';
+        try {
+          const payload = await response.json();
+          message = payload?.error || message;
+        } catch {
+          // non-json error body fallback
+        }
+        throw new Error(message);
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `audit-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+    } catch (exportError) {
+      setError(exportError instanceof Error ? exportError.message : 'Failed to export audit logs');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
-    <main className="space-y-6 p-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Audit Logs</h1>
-        <p className="mt-2 text-slate-600">Review privileged admin actions with actor, reason, and timestamp details.</p>
+    <main className="space-y-6 p-6 sm:p-8">
+      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div>
+          <span className="admin-chip">Audit trail</span>
+          <h1 className="admin-title mt-4">Audit Logs</h1>
+          <p className="admin-subtitle">Review privileged admin actions with actor, reason, and timestamp details.</p>
+        </div>
+        <div className="flex gap-3">
+          <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Entries</p>
+            <p className="mt-2 font-display text-xl font-semibold text-slate-950">{total || rows.length}</p>
+          </div>
+        </div>
       </header>
 
-      <section className="rounded-xl border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Filters</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
+        <div className="mt-4 grid gap-3 md:grid-cols-5">
           <input
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Action (example: team.invite)"
             value={actionFilter}
             onChange={(event) => setActionFilter(event.target.value)}
           />
           <input
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Resource (example: roles)"
             value={resourceFilter}
             onChange={(event) => setResourceFilter(event.target.value)}
           />
           <input
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Actor email"
             value={actorEmailFilter}
             onChange={(event) => setActorEmailFilter(event.target.value)}
           />
+          <input
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            type="date"
+            value={dateFrom}
+            onChange={(event) => setDateFrom(event.target.value)}
+          />
+          <input
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            type="date"
+            value={dateTo}
+            onChange={(event) => setDateTo(event.target.value)}
+          />
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={String(limit)}
+            onChange={(event) => {
+              setLimit(Number(event.target.value || 25));
+              setSkip(0);
+            }}
+          >
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
           <button
             type="button"
-            onClick={() => void load()}
-            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            onClick={() => {
+              setSkip(0);
+              void load();
+            }}
+            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
           >
             Refresh
+          </button>
+          <button
+            type="button"
+            onClick={() => void exportCsv()}
+            disabled={exporting}
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {exporting ? 'Exporting...' : 'Export CSV'}
           </button>
         </div>
       </section>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="rounded-xl border border-slate-200">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Recent events</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Recent events</h2>
         </div>
 
         {loading ? (
@@ -102,8 +233,8 @@ export default function AuditLogsPage() {
           <p className="px-5 py-4 text-sm text-slate-500">No audit events found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
+            <table className="admin-table min-w-full text-left text-sm">
+              <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Time</th>
                   <th className="px-5 py-3">Actor</th>
@@ -114,7 +245,7 @@ export default function AuditLogsPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row._id || `${row.action}-${row.createdAt}`} className="border-t border-slate-200">
+                  <tr key={row._id || `${row.action}-${row.createdAt}`} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
                     <td className="px-5 py-3 text-slate-500">{new Date(row.createdAt).toLocaleString()}</td>
                     <td className="px-5 py-3 text-slate-700">
                       <div>{row.actor?.email || '-'}</div>
@@ -129,6 +260,30 @@ export default function AuditLogsPage() {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+        <p className="text-sm text-slate-600">
+          Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={loading || skip === 0}
+            onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            disabled={loading || !hasMore}
+            onClick={() => setSkip((prev) => prev + limit)}
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Next
+          </button>
+        </div>
       </section>
     </main>
   );

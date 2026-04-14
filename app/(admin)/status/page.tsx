@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type StatusPayload = {
   generatedAt: string;
@@ -26,9 +27,9 @@ type StatusPayload = {
 
 function summaryCard(title: string, value: string, highlightClass = 'text-slate-900') {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-5">
+    <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
-      <p className={`mt-2 text-2xl font-semibold ${highlightClass}`}>{value}</p>
+      <p className={`mt-2 font-display text-2xl font-semibold ${highlightClass}`}>{value}</p>
     </article>
   );
 }
@@ -60,25 +61,22 @@ export default function StatusPage() {
   }, []);
 
   return (
-    <main className="space-y-6 p-8">
-      <header className="flex flex-wrap items-start justify-between gap-3">
+    <main className="space-y-6 p-6 sm:p-8">
+      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-900">System Status</h1>
-          <p className="mt-2 text-slate-600">Live operational summary for integrations and pending operational queues.</p>
+          <span className="admin-chip">Operational overview</span>
+          <h1 className="admin-title mt-4">System Status</h1>
+          <p className="admin-subtitle">Live operational summary for integrations and pending operational queues.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => void load()}
-          className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
+        <button type="button" onClick={() => void load()} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5">
           Refresh
         </button>
       </header>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       {loading ? (
-        <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">Loading system status...</p>
+        <p className="rounded-[28px] border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">Loading system status...</p>
       ) : data ? (
         <>
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -94,12 +92,12 @@ export default function StatusPage() {
             {summaryCard('Pending Refund Requests', String(data.queues.pendingRefunds))}
           </section>
 
-          <section className="rounded-xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 px-5 py-3">
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Integration Signals</h2>
+          <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+            <div className="border-b border-slate-200/80 px-5 py-4">
+              <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Integration Signals</h2>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
+              <table className="admin-table min-w-full text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                   <tr>
                     <th className="px-5 py-3">Integration</th>
@@ -109,7 +107,7 @@ export default function StatusPage() {
                 </thead>
                 <tbody>
                   {data.integrations.map((item) => (
-                    <tr key={item.key} className="border-t border-slate-200">
+                    <tr key={item.key} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
                       <td className="px-5 py-3 font-medium text-slate-800">{item.label}</td>
                       <td className="px-5 py-3 text-slate-700">{item.status}</td>
                       <td className="px-5 py-3 text-slate-700">{item.details}</td>
@@ -123,7 +121,7 @@ export default function StatusPage() {
           <p className="text-xs text-slate-500">Generated at {new Date(data.generatedAt).toLocaleString()}</p>
         </>
       ) : (
-        <p className="rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500">No status data available.</p>
+        <p className="rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 text-sm text-slate-500 shadow-sm">No status data available.</p>
       )}
     </main>
   );

@@ -28,7 +28,11 @@ const settingsPatchSchema = z.object({
     .object({
       enableContactAutoAssign: z.boolean().optional(),
       enableRefundQueueAlerts: z.boolean().optional(),
-      enableReleaseReadinessChecks: z.boolean().optional(),
+    })
+    .optional(),
+  notifications: z
+    .object({
+      retentionDays: z.number().int().min(1).max(365).optional(),
     })
     .optional(),
   reason: z.string().min(3).max(240),
@@ -65,7 +69,8 @@ export async function PATCH(request: NextRequest) {
     Boolean(parsed.data.support) ||
     Boolean(parsed.data.billing) ||
     Boolean(parsed.data.security) ||
-    Boolean(parsed.data.features);
+    Boolean(parsed.data.features) ||
+    Boolean(parsed.data.notifications);
 
   if (!hasChange) {
     return NextResponse.json({ success: false, error: 'Nothing to update' }, { status: 400 });
@@ -77,9 +82,14 @@ export async function PATCH(request: NextRequest) {
       billing: parsed.data.billing,
       security: parsed.data.security,
       features: parsed.data.features,
+      notifications: parsed.data.notifications,
     },
     result.session.email
   );
+
+  if (!updated.changed) {
+    return NextResponse.json({ success: false, error: 'No effective setting changes detected' }, { status: 400 });
+  }
 
   await writeAuditLog({
     actor: result.session,

@@ -4,9 +4,64 @@ import { getAdminDb } from '@/lib/db/mongo';
 import type { AdminInviteDocument, AdminUserDocument } from '@/types/admin';
 import type { RoleKey } from '@/types/rbac';
 
-export async function listTeamMembers() {
+export type TeamListFilters = {
+  search?: string;
+  role?: RoleKey | 'all';
+  status?: AdminUserDocument['status'] | 'all';
+  limit?: number;
+  skip?: number;
+  sortBy?: 'createdAt' | 'updatedAt' | 'email' | 'displayName';
+  sortDir?: 'asc' | 'desc';
+};
+
+function toSafeRegex(search: string) {
+  return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+}
+
+function buildSortStage(sortBy: TeamListFilters['sortBy'], sortDir: TeamListFilters['sortDir']) {
+  const direction = sortDir === 'asc' ? 1 : -1;
+  if (sortBy === 'updatedAt') return { updatedAt: direction };
+  if (sortBy === 'email') return { email: direction };
+  if (sortBy === 'displayName') return { displayName: direction };
+  return { createdAt: direction };
+}
+
+export async function listTeamMembers(filters: TeamListFilters = {}) {
   const db = await getAdminDb();
-  return db.collection<AdminUserDocument>('admin_users').find({}).sort({ createdAt: -1 }).toArray();
+  const limit = Math.min(200, Math.max(1, Number(filters.limit || 50)));
+  const skip = Math.max(0, Number(filters.skip || 0));
+  const sort = buildSortStage(filters.sortBy, filters.sortDir);
+
+  const match: Record<string, unknown> = {};
+  if (filters.role && filters.role !== 'all') {
+    match.role = filters.role;
+  }
+  if (filters.status && filters.status !== 'all') {
+    match.status = filters.status;
+  }
+  if (String(filters.search || '').trim()) {
+    const regex = toSafeRegex(String(filters.search || '').trim());
+    match.$or = [{ email: regex }, { displayName: regex }, { clerkUserId: regex }];
+  }
+
+  const rows = await db
+    .collection<AdminUserDocument>('admin_users')
+    .aggregate([
+      { $match: match },
+      {
+        $facet: {
+          items: [{ $sort: sort }, { $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ])
+    .toArray();
+
+  const first = rows[0] as { items?: unknown[]; totalCount?: Array<{ count?: number }> } | undefined;
+  return {
+    items: Array.isArray(first?.items) ? first?.items : [],
+    total: Number(first?.totalCount?.[0]?.count || 0),
+  };
 }
 
 export async function createTeamInvite(input: { email: string; role: RoleKey; invitedBy: string }) {
@@ -47,4 +102,21 @@ export async function updateTeamMember(adminUserId: string, patch: Partial<Pick<
     },
     { returnDocument: 'after' }
   );
+}
+
+export async function getTeamMemberById(adminUserId: string) {
+  const db = await getAdminDb();
+  const filter = ObjectId.isValid(adminUserId)
+    ? { _id: new ObjectId(adminUserId) }
+    : { clerkUserId: adminUserId };
+
+  return db.collection<AdminUserDocument>('admin_users').findOne(filter);
+}
+
+export async function countActiveSuperAdmins() {
+  const db = await getAdminDb();
+  return db.collection<AdminUserDocument>('admin_users').countDocuments({
+    role: 'super_admin',
+    status: 'active',
+  });
 }

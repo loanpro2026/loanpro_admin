@@ -22,7 +22,8 @@ const allowedTicketTransitions: Record<string, string[]> = {
 };
 
 function normalizeStatus(value: unknown) {
-  return String(value || '').trim().toLowerCase();
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'in_progress' ? 'in-progress' : normalized;
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ ticketId: string }> }) {

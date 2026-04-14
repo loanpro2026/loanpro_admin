@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import crypto from 'crypto';
 import { requireApiSession } from '@/server/api/guards';
 import { parseJsonBody } from '@/server/api/request';
 import { hasPermission } from '@/lib/rbac/permissions';
 import { getSubscriptionById, updateSubscriptionById } from '@/server/repositories/subscriptions';
 import { writeAuditLog } from '@/server/services/audit-log';
+import { getAdminDb } from '@/lib/db/mongo';
+import { invalidateCacheByPrefixes } from '@/server/services/response-cache';
 
 const patchSchema = z.object({
   status: z.enum(['active', 'trial', 'cancelled', 'expired', 'superseded', 'active_subscription']).optional(),
@@ -23,6 +26,47 @@ const allowedSubscriptionTransitions: Record<string, string[]> = {
 
 function normalizeStatus(value: unknown) {
   return String(value || '').trim().toLowerCase();
+}
+
+async function applyUserAccessForSubscriptionStatus(userId: string, nextStatus: string) {
+  const db = await getAdminDb();
+  const status = normalizeStatus(nextStatus);
+
+  if (['active', 'trial', 'active_subscription'].includes(status)) {
+    const token = crypto.randomBytes(48).toString('hex');
+    await db.collection('users').updateOne(
+      { userId },
+      {
+        $set: {
+          accessToken: token,
+          status: 'active_subscription',
+          updatedAt: new Date(),
+        },
+      }
+    );
+    return;
+  }
+
+  if (['cancelled', 'expired', 'superseded'].includes(status)) {
+    const activeCount = await db.collection('subscriptions').countDocuments({
+      userId,
+      status: { $in: ['active', 'trial', 'active_subscription'] },
+    });
+
+    if (activeCount === 0) {
+      await db.collection('users').updateOne(
+        { userId },
+        {
+          $set: {
+            accessToken: null,
+            status: 'cancelled_subscription',
+            cancelledDate: new Date(),
+            updatedAt: new Date(),
+          },
+        }
+      );
+    }
+  }
 }
 
 export async function PATCH(request: NextRequest, context: { params: Promise<{ subscriptionId: string }> }) {
@@ -83,6 +127,13 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ s
     return NextResponse.json({ success: false, error: 'Subscription not found' }, { status: 404 });
   }
 
+  if (parsed.data.status) {
+    const userId = String((updated as { userId?: unknown }).userId || '').trim();
+    if (userId) {
+      await applyUserAccessForSubscriptionStatus(userId, parsed.data.status);
+    }
+  }
+
   await writeAuditLog({
     actor: sessionResult.session,
     action: 'subscriptions.update',
@@ -92,6 +143,8 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ s
     before: existing as unknown as Record<string, unknown>,
     after: updated as unknown as Record<string, unknown>,
   });
+
+  invalidateCacheByPrefixes(['subscriptions:list:', 'users:list:', 'payments:list:', 'dashboard:']);
 
   return NextResponse.json({ success: true, data: updated });
 }

@@ -46,6 +46,60 @@ export async function listRoles() {
   return db.collection<AdminRoleDocument>('admin_roles').find({}).sort({ isSystemRole: -1, key: 1 }).toArray();
 }
 
+export type RoleListFilters = {
+  search?: string;
+  type?: 'all' | 'system' | 'custom';
+  limit?: number;
+  skip?: number;
+  sortBy?: 'updatedAt' | 'name' | 'key';
+  sortDir?: 'asc' | 'desc';
+};
+
+function toSafeRegex(search: string) {
+  return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+}
+
+function buildSortStage(sortBy: RoleListFilters['sortBy'], sortDir: RoleListFilters['sortDir']) {
+  const direction = sortDir === 'asc' ? 1 : -1;
+  if (sortBy === 'name') return { name: direction };
+  if (sortBy === 'key') return { key: direction };
+  return { updatedAt: direction };
+}
+
+export async function listRolesPaged(filters: RoleListFilters = {}) {
+  const db = await getAdminDb();
+  const limit = Math.min(200, Math.max(1, Number(filters.limit || 50)));
+  const skip = Math.max(0, Number(filters.skip || 0));
+  const sort = buildSortStage(filters.sortBy, filters.sortDir);
+
+  const match: Record<string, unknown> = {};
+  if (filters.type === 'system') match.isSystemRole = true;
+  if (filters.type === 'custom') match.isSystemRole = false;
+  if (String(filters.search || '').trim()) {
+    const regex = toSafeRegex(String(filters.search || '').trim());
+    match.$or = [{ key: regex }, { name: regex }, { description: regex }];
+  }
+
+  const rows = await db
+    .collection<AdminRoleDocument>('admin_roles')
+    .aggregate([
+      { $match: match },
+      {
+        $facet: {
+          items: [{ $sort: { isSystemRole: -1, ...sort } }, { $skip: skip }, { $limit: limit }],
+          totalCount: [{ $count: 'count' }],
+        },
+      },
+    ])
+    .toArray();
+
+  const first = rows[0] as { items?: unknown[]; totalCount?: Array<{ count?: number }> } | undefined;
+  return {
+    items: Array.isArray(first?.items) ? first?.items : [],
+    total: Number(first?.totalCount?.[0]?.count || 0),
+  };
+}
+
 export async function createCustomRole(input: {
   key: string;
   name: string;

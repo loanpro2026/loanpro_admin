@@ -6,10 +6,109 @@
   color-scheme: light;
 }
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background: #f8fafc;
-  color: #0f172a;
-  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    color: #0f172a;
+    font-family: var(--font-manrope), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    background:
+      radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 28%),
+      radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 24%),
+      linear-gradient(180deg, #eef4ff 0%, #f8fafc 22%, #f8fafc 100%);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background: rgba(37, 99, 235, 0.16);
+    color: #1e3a8a;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .admin-surface {
+    @apply rounded-[28px] border border-white/70 bg-white/80 shadow-panel backdrop-blur-xl;
+  }
+
+  .admin-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/70 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600 shadow-sm backdrop-blur;
+  }
+
+  .admin-muted {
+    @apply text-slate-500;
+  }
+
+  .admin-title {
+    @apply font-display text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl;
+  }
+
+  .admin-subtitle {
+    @apply mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base;
+  }
+
+  .admin-focus {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white;
+  }
+
+  .admin-alert {
+    @apply rounded-2xl border px-4 py-3 text-sm shadow-sm;
+  }
+
+  .admin-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .admin-table thead th {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  .admin-table tbody td {
+    vertical-align: top;
+  }
+
+  @media (max-width: 640px) {
+    .admin-title {
+      font-size: 1.5rem;
+      line-height: 1.2;
+    }
+
+    .admin-subtitle {
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .admin-chip {
+      letter-spacing: 0.14em;
+    }
+
+    :where(main) :is(input.admin-focus, select.admin-focus, button.admin-focus, textarea.admin-focus) {
+      min-height: 2.625rem;
+    }
+
+    .admin-table thead th,
+    .admin-table tbody td {
+      padding: 0.625rem 0.75rem !important;
+    }
+
+    .admin-table tbody td {
+      font-size: 0.8125rem;
+      line-height: 1.35;
+    }
+
+    .admin-table :is(button, select) {
+      min-height: 2.25rem;
+    }
+  }
 }

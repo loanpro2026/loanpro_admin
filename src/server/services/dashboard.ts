@@ -1,9 +1,51 @@
-import { getAdminDb } from '@/lib/db/mongo';
+import { getAdminDb, getSupportDb } from '@/lib/db/mongo';
+import { countOpenContactRequests, countOpenSupportTickets } from '@/server/repositories/support-collections';
 
 const SUCCESS_STATUS_REGEX = /^(captured|completed|success|successful|paid)$/i;
 
+function normalizeString(value: unknown) {
+  return String(value || '').trim().toLowerCase();
+}
+
+async function getCustomerUserFilter() {
+  const db = await getAdminDb();
+  const adminRows = await db
+    .collection('admin_users')
+    .find({})
+    .project({ clerkUserId: 1, email: 1 })
+    .toArray();
+
+  const adminUserIds = Array.from(
+    new Set(
+      adminRows
+        .map((row) => normalizeString((row as { clerkUserId?: unknown }).clerkUserId))
+        .filter(Boolean)
+    )
+  );
+  const adminEmails = Array.from(
+    new Set(
+      adminRows
+        .map((row) => normalizeString((row as { email?: unknown }).email))
+        .filter(Boolean)
+    )
+  );
+
+  if (!adminUserIds.length && !adminEmails.length) {
+    return {};
+  }
+
+  return {
+    $nor: [
+      ...(adminUserIds.length ? [{ $expr: { $in: [{ $toLower: { $ifNull: ['$userId', ''] } }, adminUserIds] } }] : []),
+      ...(adminEmails.length ? [{ $expr: { $in: [{ $toLower: { $ifNull: ['$email', ''] } }, adminEmails] } }] : []),
+    ],
+  };
+}
+
 export async function getDashboardKpis() {
   const db = await getAdminDb();
+  const supportDb = await getSupportDb();
+  const customerUserFilter = await getCustomerUserFilter();
 
   const monthStart = new Date();
   monthStart.setDate(1);
@@ -19,12 +61,12 @@ export async function getDashboardKpis() {
     totalRevenueRows,
     monthlyRevenueRows,
   ] = await Promise.all([
-    db.collection('users').countDocuments(),
+    db.collection('users').countDocuments(customerUserFilter),
     db.collection('subscriptions').countDocuments({ status: 'active' }),
     db.collection('subscriptions').countDocuments({ status: 'trial' }),
     db.collection('subscriptions').countDocuments({ status: 'cancelled' }),
-    db.collection('support_tickets').countDocuments({ status: { $in: ['open', 'in-progress'] } }).catch(() => 0),
-    db.collection('contact_requests').countDocuments({ status: { $in: ['new', 'open'] } }).catch(() => 0),
+    countOpenSupportTickets(supportDb).catch(() => 0),
+    countOpenContactRequests(supportDb).catch(() => 0),
     db.collection('payments').aggregate([
       { $match: { status: { $regex: SUCCESS_STATUS_REGEX } } },
       { $group: { _id: null, total: { $sum: '$amount' } } },

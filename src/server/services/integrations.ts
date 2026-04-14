@@ -1,5 +1,6 @@
 import { getEnv } from '@/config/env';
-import { getAdminDb } from '@/lib/db/mongo';
+import { getAdminDb, getSupportDb } from '@/lib/db/mongo';
+import { countOpenContactRequests, countOpenSupportTickets } from '@/server/repositories/support-collections';
 
 export type IntegrationStatus = 'healthy' | 'degraded' | 'missing';
 
@@ -113,14 +114,6 @@ export async function getIntegrationsHealth() {
       env.RAZORPAY_KEY_ID && env.RAZORPAY_KEY_SECRET ? 'Key ID/secret configured' : 'Razorpay keys missing'
     ),
     buildResult(
-      'github',
-      'GitHub Releases',
-      env.GITHUB_TOKEN && env.GITHUB_RELEASE_OWNER && env.GITHUB_RELEASE_REPO ? 'healthy' : 'missing',
-      env.GITHUB_TOKEN && env.GITHUB_RELEASE_OWNER && env.GITHUB_RELEASE_REPO
-        ? `${env.GITHUB_RELEASE_OWNER}/${env.GITHUB_RELEASE_REPO}`
-        : 'GitHub release configuration incomplete'
-    ),
-    buildResult(
       'ga',
       'Google Analytics',
       env.NEXT_PUBLIC_GA_MEASUREMENT_ID ? 'healthy' : 'missing',
@@ -156,11 +149,12 @@ export async function getSystemStatusOverview() {
   const [integrationHealth, supportSummary] = await Promise.all([
     getIntegrationsHealth(),
     (async () => {
-      const db = await getAdminDb();
+      const supportDb = await getSupportDb();
+      const adminDb = await getAdminDb();
       const [openTickets, openContacts, pendingRefunds] = await Promise.all([
-        db.collection('supporttickets').countDocuments({ status: { $in: ['open', 'in-progress'] } }).catch(() => 0),
-        db.collection('contactrequests').countDocuments({ status: { $in: ['new', 'follow-up', 'open'] } }).catch(() => 0),
-        db.collection('payments').countDocuments({ refundStatus: { $in: ['requested', 'pending'] } }).catch(() => 0),
+        countOpenSupportTickets(supportDb).catch(() => 0),
+        countOpenContactRequests(supportDb).catch(() => 0),
+        adminDb.collection('payments').countDocuments({ refundStatus: { $in: ['requested', 'pending'] } }).catch(() => 0),
       ]);
 
       return {

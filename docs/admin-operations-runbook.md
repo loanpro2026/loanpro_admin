@@ -13,6 +13,10 @@ Required core:
 - `MONGODB_DB_NAME=AdminDB`
 - `CLERK_SECRET_KEY`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+- `NEXT_PUBLIC_CLERK_DOMAIN=accounts.loanpro.tech` (or your Clerk primary custom domain)
+- `NEXT_PUBLIC_CLERK_IS_SATELLITE=true`
+- `NEXT_PUBLIC_CLERK_SIGN_IN_URL=https://accounts.loanpro.tech/sign-in`
+- `NEXT_PUBLIC_CLERK_SIGN_UP_URL=https://accounts.loanpro.tech/sign-up` or `/unauthorized`
 
 Required security/bootstrap:
 - `ADMIN_INIT_SECRET` (strong random secret)
@@ -29,9 +33,6 @@ Integrations:
 - `RAZORPAY_WEBHOOK_SECRET`
 - `CLOUD_RUN_BASE_URL`
 - `CLOUD_RUN_API_TOKEN`
-- `GITHUB_TOKEN`
-- `GITHUB_RELEASE_OWNER`
-- `GITHUB_RELEASE_REPO`
 - `NEXT_PUBLIC_GA_MEASUREMENT_ID`
 
 Optional GA usage API credentials (for live GA usage in Integrations > Usage and Limits):
@@ -55,6 +56,13 @@ Never set in production:
 2. Ensure sign-in route is `/sign-in`.
 3. Disable/avoid public sign-up for admin app usage.
 4. Create your first internal user in Clerk Dashboard (email that will be super admin).
+5. If you use a Clerk custom domain like `accounts.loanpro.tech`, verify it is fully active and that `admin.loanpro.tech` is listed as an authorized origin.
+6. Set the app redirect URLs to stay on the admin origin, not the hosted Clerk domain:
+   - `https://admin.loanpro.tech/sign-in`
+   - `https://admin.loanpro.tech/dashboard`
+7. Enable the Email + Password sign-in factor in Clerk if you plan to use a password login flow.
+8. Make sure the admin user has an actual password set in Clerk, not only an email record.
+9. If the sign-in page still redirects across domains, set the `NEXT_PUBLIC_CLERK_DOMAIN` and `NEXT_PUBLIC_CLERK_IS_SATELLITE` env vars in Vercel so the app explicitly behaves as a satellite domain.
 
 ## 3) First Super Admin Bootstrap
 
@@ -88,7 +96,6 @@ Role strategy:
 - `admin_ops`: day-to-day operations.
 - `support_agent`: support and contact queues.
 - `finance_admin`: payment/refund/reconciliation.
-- `release_manager`: release lifecycle.
 - `analyst`: read/export-heavy access.
 - `viewer`: read-only baseline.
 
@@ -101,10 +108,8 @@ Reason is required for:
 - Role creation.
 - Role updates and deletes.
 - Subscription status changes.
-- Release create and release actions.
 
 Invalid lifecycle transitions are blocked for:
-- Releases (publish/promote/rollback rules).
 - Subscriptions.
 - Support tickets.
 - Contact requests.
@@ -125,6 +130,9 @@ Current usage integrations:
 ## 7) Vercel Deploy Sequence
 
 1. Add all env vars in Vercel project.
+   - Framework Preset must be `Next.js`.
+   - Leave `Output Directory` empty. Do not set it to `public`.
+   - Do not use `next export` or `output: 'export'` for this app.
 2. Run pre-deploy checks locally (with production-like env values exported):
 
 ```powershell
@@ -150,6 +158,7 @@ npm run predeploy:check
 5. Integrations health and usage load successfully.
 6. Limits show expected status (`healthy`/`degraded`/`missing`).
 7. Audit log entries include actor, reason, and before/after snapshots.
+8. Clerk sign-in stays on `admin.loanpro.tech` and does not redirect the browser to `accounts.loanpro.tech` during dashboard navigation.
 
 ## 9) Suggested First-Team Rollout
 

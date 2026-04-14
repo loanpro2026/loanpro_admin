@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type SubscriptionRow = {
   _id: string;
@@ -16,20 +17,51 @@ type SubscriptionRow = {
   updatedAt?: string;
 };
 
+type UserOption = {
+  userId: string;
+  email?: string;
+  username?: string;
+  fullName?: string;
+};
+
 export default function SubscriptionsPage() {
+  const STORAGE_KEY = 'lp_admin_subscriptions_table_v1';
   const [rows, setRows] = useState<SubscriptionRow[]>([]);
+  const [users, setUsers] = useState<UserOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState('');
   const [plan, setPlan] = useState('');
   const [updatingId, setUpdatingId] = useState('');
+  const [skip, setSkip] = useState(0);
+  const [limit, setLimit] = useState(25);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'amount' | 'status' | 'plan'>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [creating, setCreating] = useState(false);
+  const [newSub, setNewSub] = useState({
+    userId: '',
+    plan: 'basic',
+    billingPeriod: 'monthly',
+    startDate: '',
+    endDate: '',
+    amount: '',
+    remark: '',
+    reason: '',
+  });
 
   const load = async () => {
     setLoading(true);
     setError('');
     try {
-      const params = new URLSearchParams({ limit: '100' });
+      const params = new URLSearchParams({
+        limit: String(limit),
+        skip: String(skip),
+        sortBy,
+        sortDir,
+      });
       if (search.trim()) params.set('search', search.trim());
       if (status.trim()) params.set('status', status.trim());
       if (plan.trim()) params.set('plan', plan.trim());
@@ -42,6 +74,8 @@ export default function SubscriptionsPage() {
       }
 
       setRows(payload.data || []);
+      setTotal(Number(payload?.meta?.total || 0));
+      setHasMore(Boolean(payload?.meta?.hasMore));
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Failed to fetch subscriptions');
     } finally {
@@ -50,8 +84,95 @@ export default function SubscriptionsPage() {
   };
 
   useEffect(() => {
-    void load();
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        search?: string;
+        status?: string;
+        plan?: string;
+        sortBy?: 'createdAt' | 'updatedAt' | 'amount' | 'status' | 'plan';
+        sortDir?: 'asc' | 'desc';
+        limit?: number;
+      };
+      if (typeof parsed.search === 'string') setSearch(parsed.search);
+      if (typeof parsed.status === 'string') setStatus(parsed.status);
+      if (typeof parsed.plan === 'string') setPlan(parsed.plan);
+      if (parsed.sortBy === 'createdAt' || parsed.sortBy === 'updatedAt' || parsed.sortBy === 'amount' || parsed.sortBy === 'status' || parsed.sortBy === 'plan') setSortBy(parsed.sortBy);
+      if (parsed.sortDir === 'asc' || parsed.sortDir === 'desc') setSortDir(parsed.sortDir);
+      if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
+    } catch {
+      // Ignore invalid saved preferences
+    }
   }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({ search, status, plan, sortBy, sortDir, limit })
+      );
+    } catch {
+      // Ignore storage errors
+    }
+  }, [search, status, plan, sortBy, sortDir, limit]);
+
+  useEffect(() => {
+    void load();
+    void (async () => {
+      try {
+        const response = await fetch('/api/users?limit=200');
+        const payload = await response.json();
+        if (response.ok && payload?.success && Array.isArray(payload.data)) {
+          setUsers(payload.data);
+        }
+      } catch {
+        // non-blocking helper data load
+      }
+    })();
+  }, [skip, sortBy, sortDir, limit]);
+
+  const createSubscription = async () => {
+    setCreating(true);
+    setError('');
+    try {
+      const response = await fetch('/api/subscriptions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: newSub.userId,
+          plan: newSub.plan,
+          billingPeriod: newSub.billingPeriod,
+          ...(newSub.startDate ? { startDate: newSub.startDate } : {}),
+          ...(newSub.endDate ? { endDate: newSub.endDate } : {}),
+          ...(newSub.amount.trim() ? { amount: Number(newSub.amount) } : {}),
+          remark: newSub.remark.trim(),
+          reason: newSub.reason.trim(),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Failed to create subscription');
+      }
+
+      setNewSub({
+        userId: '',
+        plan: 'basic',
+        billingPeriod: 'monthly',
+        startDate: '',
+        endDate: '',
+        amount: '',
+        remark: '',
+        reason: '',
+      });
+      await load();
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : 'Failed to create subscription');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const updateStatus = async (row: SubscriptionRow, nextStatus: string) => {
     setUpdatingId(row._id);
@@ -83,22 +204,133 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <main className="space-y-6 p-8">
-      <header>
-        <h1 className="text-2xl font-semibold text-slate-900">Subscriptions</h1>
-        <p className="mt-2 text-slate-600">Monitor subscription lifecycle and manage account status transitions.</p>
+    <main className="space-y-6 p-6 sm:p-8">
+      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
+        <div>
+          <span className="admin-chip">Subscription control</span>
+          <h1 className="admin-title mt-4">Subscriptions</h1>
+          <p className="admin-subtitle">Monitor lifecycle state and create manual subscriptions for existing users.</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            ['Total', String(total || rows.length)],
+            ['Visible', String(rows.length)],
+            ['Manual', newSub.plan],
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+            </article>
+          ))}
+        </div>
       </header>
 
-      <section className="rounded-xl border border-slate-200 p-5">
-        <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Filters</h2>
+      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="subscriptions" /></span>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-slate-950">Create manual subscription</h2>
+            <p className="text-sm text-slate-500">Grant access with a reason-backed audit trail.</p>
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 md:grid-cols-4">
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={newSub.userId}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, userId: event.target.value }))}
+          >
+            <option value="">Select user</option>
+            {users.map((user) => (
+              <option key={user.userId} value={user.userId}>
+                {user.fullName || user.username || user.userId} ({user.email || user.userId})
+              </option>
+            ))}
+          </select>
+
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={newSub.plan}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, plan: event.target.value }))}
+          >
+            <option value="basic">basic</option>
+            <option value="pro">pro</option>
+            <option value="enterprise">enterprise</option>
+            <option value="trial">trial</option>
+          </select>
+
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={newSub.billingPeriod}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, billingPeriod: event.target.value }))}
+          >
+            <option value="monthly">monthly</option>
+            <option value="annually">annually</option>
+          </select>
+
+          <input
+            type="number"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            placeholder="Amount (INR)"
+            value={newSub.amount}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, amount: event.target.value }))}
+          />
+
+          <input
+            type="date"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={newSub.startDate}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, startDate: event.target.value }))}
+          />
+
+          <input
+            type="date"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={newSub.endDate}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, endDate: event.target.value }))}
+          />
+
+          <input
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            placeholder="Remark (manual grant note)"
+            value={newSub.remark}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, remark: event.target.value }))}
+          />
+
+          <input
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            placeholder="Reason"
+            value={newSub.reason}
+            onChange={(event) => setNewSub((prev) => ({ ...prev, reason: event.target.value }))}
+          />
+
+          <button
+            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            disabled={creating || !newSub.userId || !newSub.remark.trim() || !newSub.reason.trim()}
+            onClick={() => void createSubscription()}
+          >
+            {creating ? 'Creating...' : 'Create Subscription'}
+          </button>
+        </div>
+      </section>
+
+      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-5">
           <input
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search user, plan"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
-          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={status} onChange={(event) => setStatus(event.target.value)}>
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={status}
+            onChange={(event) => {
+              setStatus(event.target.value);
+              setSkip(0);
+            }}
+          >
             <option value="">All statuses</option>
             <option value="active">active</option>
             <option value="trial">trial</option>
@@ -107,28 +339,76 @@ export default function SubscriptionsPage() {
             <option value="superseded">superseded</option>
             <option value="active_subscription">active_subscription</option>
           </select>
-          <select className="rounded-md border border-slate-300 px-3 py-2 text-sm" value={plan} onChange={(event) => setPlan(event.target.value)}>
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={plan}
+            onChange={(event) => {
+              setPlan(event.target.value);
+              setSkip(0);
+            }}
+          >
             <option value="">All plans</option>
             <option value="basic">basic</option>
             <option value="pro">pro</option>
             <option value="enterprise">enterprise</option>
             <option value="trial">trial</option>
           </select>
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={sortBy}
+            onChange={(event) => {
+              setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'amount' | 'status' | 'plan');
+              setSkip(0);
+            }}
+          >
+            <option value="createdAt">Sort: Created</option>
+            <option value="updatedAt">Sort: Updated</option>
+            <option value="amount">Sort: Amount</option>
+            <option value="status">Sort: Status</option>
+            <option value="plan">Sort: Plan</option>
+          </select>
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={sortDir}
+            onChange={(event) => {
+              setSortDir(event.target.value as 'asc' | 'desc');
+              setSkip(0);
+            }}
+          >
+            <option value="desc">Desc</option>
+            <option value="asc">Asc</option>
+          </select>
+          <select
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            value={String(limit)}
+            onChange={(event) => {
+              setLimit(Number(event.target.value || 25));
+              setSkip(0);
+            }}
+          >
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
           <button
-            className="rounded-md bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
             type="button"
-            onClick={() => void load()}
+            onClick={() => {
+              setSkip(0);
+              void load();
+            }}
           >
             Search
           </button>
         </div>
       </section>
 
-      {error ? <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p> : null}
+      {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="rounded-xl border border-slate-200">
-        <div className="border-b border-slate-200 px-5 py-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-700">Subscription records</h2>
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Subscription records</h2>
         </div>
 
         {loading ? (
@@ -137,8 +417,8 @@ export default function SubscriptionsPage() {
           <p className="px-5 py-4 text-sm text-slate-500">No subscriptions found.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
+            <table className="admin-table min-w-full text-left text-sm">
+              <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">User</th>
                   <th className="px-5 py-3">Plan</th>
@@ -151,7 +431,7 @@ export default function SubscriptionsPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row._id} className="border-t border-slate-200">
+                  <tr key={row._id} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
                     <td className="px-5 py-3">
                       <div className="font-medium text-slate-800">{row.userName || row.userId}</div>
                       <div className="text-xs text-slate-500">{row.userEmail || row.userId}</div>
@@ -169,7 +449,7 @@ export default function SubscriptionsPage() {
                           type="button"
                           disabled={updatingId === row._id}
                           onClick={() => void updateStatus(row, row.status === 'cancelled' ? 'active' : 'cancelled')}
-                          className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {updatingId === row._id ? 'Updating...' : row.status === 'cancelled' ? 'Reactivate' : 'Cancel'}
                         </button>
@@ -181,6 +461,30 @@ export default function SubscriptionsPage() {
             </table>
           </div>
         )}
+      </section>
+
+      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+        <p className="text-sm text-slate-600">
+          Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            disabled={loading || skip === 0}
+            onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            disabled={loading || !hasMore}
+            onClick={() => setSkip((prev) => prev + limit)}
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Next
+          </button>
+        </div>
       </section>
     </main>
   );

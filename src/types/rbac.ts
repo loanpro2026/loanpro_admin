@@ -3,7 +3,6 @@ export type RoleKey =
   | 'admin_ops'
   | 'support_agent'
   | 'finance_admin'
-  | 'release_manager'
   | 'analyst'
   | 'viewer';
 
@@ -27,9 +26,6 @@ export type PermissionAction =
   | 'switch_approve'
   | 'reply'
   | 'escalate'
-  | 'publish'
-  | 'rollback'
-  | 'promote'
   | 'test'
   | 'reconfigure'
   | 'invite'
@@ -39,12 +35,12 @@ export type PermissionAction =
 
 export type PermissionResource =
   | 'users'
+  | 'coupons'
   | 'subscriptions'
   | 'payments'
   | 'devices'
   | 'support'
   | 'contact'
-  | 'releases'
   | 'integrations'
   | 'team'
   | 'roles'

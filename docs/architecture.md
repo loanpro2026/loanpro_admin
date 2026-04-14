@@ -12,7 +12,6 @@
 - Razorpay: payments and refunds.
 - Cloud Run: Android capture service health and controls.
 - Cloudflare: DNS, SSL, WAF, and edge controls.
-- GitHub: releases metadata and operational controls.
 - Google Analytics: usage and conversion analytics.
 
 ## Layering

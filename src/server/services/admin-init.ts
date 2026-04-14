@@ -10,11 +10,13 @@ export async function ensureAdminIndexes() {
     db.collection('admin_roles').createIndex({ key: 1 }, { unique: true }),
     db.collection('admin_invites').createIndex({ email: 1, status: 1 }),
     db.collection('admin_invites').createIndex({ expiresAt: 1 }),
-    db.collection('admin_releases').createIndex({ version: 1 }, { unique: true }),
-    db.collection('admin_releases').createIndex({ status: 1, channel: 1, createdAt: -1 }),
     db.collection('admin_audit_logs').createIndex({ createdAt: -1 }),
     db.collection('admin_audit_logs').createIndex({ 'actor.adminUserId': 1, createdAt: -1 }),
     db.collection('admin_audit_logs').createIndex({ resource: 1, resourceId: 1, createdAt: -1 }),
+    db.collection('admin_notifications').createIndex({ createdAt: -1 }),
+    db.collection('admin_notifications').createIndex({ action: 1, createdAt: -1 }),
+    db.collection('admin_notifications').createIndex({ resource: 1, resourceId: 1, createdAt: -1 }),
+    db.collection('admin_notifications').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
   ]);
 }
 

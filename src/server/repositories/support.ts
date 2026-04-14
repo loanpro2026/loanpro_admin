@@ -1,4 +1,6 @@
-import { getAdminDb } from '@/lib/db/mongo';
+import { getSupportDb } from '@/lib/db/mongo';
+import { ObjectId } from 'mongodb';
+import { getContactRequestsCollection, getSupportTicketsCollection } from '@/server/repositories/support-collections';
 
 export type TicketListFilters = {
   search?: string;
@@ -18,8 +20,30 @@ function toSafeRegex(search: string) {
   return new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 }
 
+function canonicalTicketStatus(value: string) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'in_progress') return 'in-progress';
+  return normalized;
+}
+
+function ticketIdentityQuery(ticketId: string) {
+  const normalized = String(ticketId || '').trim();
+  if (!normalized) {
+    return { ticketId: '__missing__' };
+  }
+
+  if (ObjectId.isValid(normalized)) {
+    return {
+      $or: [{ ticketId: normalized }, { _id: new ObjectId(normalized) }],
+    };
+  }
+
+  return { ticketId: normalized };
+}
+
 export async function listSupportTickets(filters: TicketListFilters) {
-  const db = await getAdminDb();
+  const db = await getSupportDb();
+  const ticketsCollection = await getSupportTicketsCollection(db);
   const limit = Math.min(200, Math.max(1, Number(filters.limit || 50)));
 
   const match: Record<string, unknown> = {};
@@ -28,7 +52,8 @@ export async function listSupportTickets(filters: TicketListFilters) {
   const search = String(filters.search || '').trim();
 
   if (status && status !== 'all') {
-    match.status = status;
+    const canonicalStatus = canonicalTicketStatus(status);
+    match.status = canonicalStatus === 'in-progress' ? { $in: ['in-progress', 'in_progress'] } : canonicalStatus;
   }
   if (priority && priority !== 'all') {
     match.priority = priority;
@@ -45,8 +70,7 @@ export async function listSupportTickets(filters: TicketListFilters) {
     ];
   }
 
-  return db
-    .collection('supporttickets')
+  const rows = await ticketsCollection
     .find(match)
     .project({
       _id: 1,
@@ -67,11 +91,18 @@ export async function listSupportTickets(filters: TicketListFilters) {
     .sort({ createdAt: -1 })
     .limit(limit)
     .toArray();
+
+  return rows.map((row) => ({
+    ...row,
+    ticketId: String((row as { ticketId?: unknown }).ticketId || (row as { _id?: unknown })._id || ''),
+    status: canonicalTicketStatus(String((row as { status?: unknown }).status || '')),
+  }));
 }
 
 export async function getSupportTicketByTicketId(ticketId: string) {
-  const db = await getAdminDb();
-  return db.collection('supporttickets').findOne({ ticketId });
+  const db = await getSupportDb();
+  const ticketsCollection = await getSupportTicketsCollection(db);
+  return ticketsCollection.findOne(ticketIdentityQuery(ticketId));
 }
 
 export async function updateSupportTicketByTicketId(
@@ -84,7 +115,8 @@ export async function updateSupportTicketByTicketId(
     adminName?: string;
   }
 ) {
-  const db = await getAdminDb();
+  const db = await getSupportDb();
+  const ticketsCollection = await getSupportTicketsCollection(db);
   const before = await getSupportTicketByTicketId(ticketId);
   if (!before) {
     return null;
@@ -96,7 +128,7 @@ export async function updateSupportTicketByTicketId(
     viewedByUser: false,
     viewedByAdmin: true,
   };
-  if (patch.status) setPatch.status = patch.status;
+  if (patch.status) setPatch.status = canonicalTicketStatus(patch.status);
   if (patch.priority) setPatch.priority = patch.priority;
   if (typeof patch.assignedTo === 'string') setPatch.assignedTo = patch.assignedTo;
 
@@ -112,8 +144,8 @@ export async function updateSupportTicketByTicketId(
     };
   }
 
-  const updated = await db.collection('supporttickets').findOneAndUpdate(
-    { ticketId },
+  const updated = await ticketsCollection.findOneAndUpdate(
+    ticketIdentityQuery(ticketId),
     updateDoc,
     { returnDocument: 'after' }
   );
@@ -125,7 +157,8 @@ export async function updateSupportTicketByTicketId(
 }
 
 export async function listContactRequests(filters: ContactListFilters) {
-  const db = await getAdminDb();
+  const db = await getSupportDb();
+  const contactRequestsCollection = await getContactRequestsCollection(db);
   const limit = Math.min(200, Math.max(1, Number(filters.limit || 50)));
 
   const match: Record<string, unknown> = {};
@@ -151,8 +184,7 @@ export async function listContactRequests(filters: ContactListFilters) {
     ];
   }
 
-  return db
-    .collection('contactrequests')
+  return contactRequestsCollection
     .find(match)
     .project({
       _id: 1,
@@ -177,8 +209,9 @@ export async function listContactRequests(filters: ContactListFilters) {
 }
 
 export async function getContactRequestByRequestId(requestId: string) {
-  const db = await getAdminDb();
-  return db.collection('contactrequests').findOne({ requestId });
+  const db = await getSupportDb();
+  const contactRequestsCollection = await getContactRequestsCollection(db);
+  return contactRequestsCollection.findOne({ requestId });
 }
 
 export async function updateContactRequestByRequestId(
@@ -191,7 +224,8 @@ export async function updateContactRequestByRequestId(
     noteBy?: string;
   }
 ) {
-  const db = await getAdminDb();
+  const db = await getSupportDb();
+  const contactRequestsCollection = await getContactRequestsCollection(db);
   const before = await getContactRequestByRequestId(requestId);
   if (!before) {
     return null;
@@ -223,7 +257,7 @@ export async function updateContactRequestByRequestId(
     };
   }
 
-  const updated = await db.collection('contactrequests').findOneAndUpdate(
+  const updated = await contactRequestsCollection.findOneAndUpdate(
     { requestId },
     updateDoc,
     { returnDocument: 'after' }
