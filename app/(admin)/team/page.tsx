@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { CreateModal } from '@/components/admin/CreateModal';
 import { ADMIN_ROLE_OPTIONS } from '@/constants/roles';
 import type { RoleKey } from '@/types/rbac';
 
@@ -154,6 +155,42 @@ export default function TeamPage() {
     }
   };
 
+  const sendInvite = async () => {
+    setInviting(true);
+    setError('');
+
+    try {
+      if (!inviteReason.trim()) {
+        throw new Error('A reason is required for team invites');
+      }
+
+      const response = await fetch('/api/team/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: inviteEmail,
+          role: inviteRole,
+          reason: inviteReason.trim(),
+        }),
+      });
+
+      const payload = await response.json();
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Failed to send invite');
+      }
+
+      setInviteEmail('');
+      setInviteRole('viewer');
+      setInviteReason('');
+      await loadTeam();
+    } catch (inviteError) {
+      setError(inviteError instanceof Error ? inviteError.message : 'Failed to send invite');
+    } finally {
+      setInviting(false);
+    }
+  };
+
+
   const handleMemberUpdate = async (member: TeamMember, nextRole: RoleKey, nextStatus: TeamMember['status']) => {
     const id = String(member._id || member.clerkUserId || '').trim();
     if (!id) return;
@@ -197,17 +234,64 @@ export default function TeamPage() {
           <h1 className="admin-title mt-4">Team Management</h1>
           <p className="admin-subtitle">Invite admins, review roles, and control account access for internal users.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            ['Members', String(total || members.length)],
-            ['Visible', String(members.length)],
-            ['Invite role', inviteRole],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-            </article>
-          ))}
+        <div className="flex items-end justify-between gap-3">
+          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+            {[
+              ['Members', String(total || members.length)],
+              ['Visible', String(members.length)],
+              ['Active', String(members.filter((m) => m.status === 'active').length)],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+              </article>
+            ))}
+          </div>
+          <CreateModal
+            title="Invite Team Member"
+            description="Send an invite to a new admin with role-based permissions"
+            icon="team"
+            onSubmit={sendInvite}
+            isLoading={inviting}
+            disabled={!inviteEmail.trim() || !inviteReason.trim()}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Email Address *</label>
+                <input
+                  type="email"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="colleague@company.com"
+                  value={inviteEmail}
+                  onChange={(event) => setInviteEmail(event.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Role *</label>
+                <select
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  value={inviteRole}
+                  onChange={(event) => setInviteRole(event.target.value as RoleKey)}
+                >
+                  {ADMIN_ROLE_OPTIONS.map((role) => (
+                    <option key={role.key} value={role.key}>{role.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Reason for Invitation *</label>
+                <input
+                  type="text"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="e.g., New team member, admin promotion"
+                  value={inviteReason}
+                  onChange={(event) => setInviteReason(event.target.value)}
+                  required
+                />
+              </div>
+            </div>
+          </CreateModal>
         </div>
       </header>
 
@@ -247,27 +331,7 @@ export default function TeamPage() {
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="team" /></span>
-          <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Invite team member</h2>
-            <p className="text-sm text-slate-500">Send a role-based Clerk invitation with an audit reason.</p>
-          </div>
-        </div>
-        <form className="mt-5 grid gap-3 md:grid-cols-4" onSubmit={handleInvite}>
-          <input className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200" type="email" required placeholder="teammate@loanpro.tech" value={inviteEmail} onChange={(event) => setInviteEmail(event.target.value)} />
-          <select className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200" value={inviteRole} onChange={(event) => setInviteRole(event.target.value as RoleKey)}>
-            {ADMIN_ROLE_OPTIONS.map((role) => (
-              <option key={role.key} value={role.key}>{role.label}</option>
-            ))}
-          </select>
-          <input className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200" type="text" placeholder="Reason (required)" value={inviteReason} onChange={(event) => setInviteReason(event.target.value)} required />
-          <button type="submit" disabled={inviting} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60">{inviting ? 'Sending...' : 'Send Invite'}</button>
-        </form>
-      </section>
-
-      {error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">{error}</p> : null}
+{error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">{error}</p> : null}
 
       <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">

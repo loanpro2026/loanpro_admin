@@ -46,14 +46,14 @@ export function AdminProfileMenu() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="admin-focus group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 px-3 py-2 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:shadow-panel"
+        className="admin-focus group flex h-10 items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
       >
-        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-600 to-cyan-500 text-sm font-semibold text-white shadow-glow">
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-950 text-xs font-semibold text-white shadow-sm">
           {initials}
         </span>
         <span className="hidden text-left sm:block">
-          <span className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Admin Profile</span>
-          <span className="block max-w-[160px] truncate text-sm font-semibold text-slate-900">{user?.fullName || user?.username || 'Administrator'}</span>
+          <span className="block text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500">Profile</span>
+          <span className="block max-w-[150px] truncate text-sm font-semibold text-slate-900">{user?.fullName || user?.username || 'Administrator'}</span>
         </span>
         <svg className={`h-4 w-4 text-slate-500 transition ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="none" aria-hidden="true">
           <path d="M6 8l4 4 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
@@ -61,10 +61,10 @@ export function AdminProfileMenu() {
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-3 w-[320px] overflow-hidden rounded-[24px] border border-white/70 bg-white/95 shadow-[0_30px_90px_rgba(15,23,42,0.14)] backdrop-blur-xl">
-          <div className="bg-gradient-to-br from-brand-600 via-brand-700 to-cyan-600 px-5 py-5 text-white">
+        <div className="absolute right-0 z-50 mt-3 w-[300px] overflow-hidden rounded-[20px] border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,0.12)]">
+          <div className="bg-slate-950 px-4 py-4 text-white">
             <div className="flex items-center gap-3">
-              <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-lg font-semibold backdrop-blur">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 text-sm font-semibold backdrop-blur">
                 {initials}
               </span>
               <div className="min-w-0">

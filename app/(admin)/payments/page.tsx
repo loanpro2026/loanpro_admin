@@ -169,9 +169,10 @@ export default function PaymentsPage() {
                 <td className="px-5 py-3 text-slate-700">{row.status || '-'}</td>
                 <td className="px-5 py-3 text-slate-700">{row.refundStatus || '-'}</td>
                 <td className="px-5 py-3">
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1">
                     <button
                       type="button"
+                      title="Mark for refund review"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund review request');
@@ -185,12 +186,13 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Refund Review
+                      🔍
                     </button>
                     <button
                       type="button"
+                      title="Approve refund"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund approval');
@@ -205,12 +207,13 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Mark Refunded
+                      ✓
                     </button>
                     <button
                       type="button"
+                      title="Reconcile payment"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('payment reconciliation');
@@ -224,9 +227,9 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Reconcile
+                      🔄
                     </button>
                   </div>
                 </td>
@@ -260,23 +263,23 @@ export default function PaymentsPage() {
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+      <section className="admin-surface">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="payments" /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><AdminIcon name="payments" size={18} /></span>
           <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
-            <p className="text-sm text-slate-500">Search, sort, and isolate payment states quickly.</p>
+            <h2 className="font-semibold text-slate-950">Filters</h2>
+            <p className="text-xs text-slate-500">Search, sort, and isolate payment states.</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="mt-4 grid gap-2 md:grid-cols-5">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search by payment/user/order"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value);
@@ -290,101 +293,90 @@ export default function PaymentsPage() {
             <option value="refunded">Refunded</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'amount' | 'status');
               setSkip(0);
             }}
           >
-            <option value="createdAt">Sort: Created</option>
-            <option value="updatedAt">Sort: Updated</option>
-            <option value="amount">Sort: Amount</option>
-            <option value="status">Sort: Status</option>
+            <option value="createdAt">Created</option>
+            <option value="updatedAt">Updated</option>
+            <option value="amount">Amount</option>
+            <option value="status">Status</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as 'asc' | 'desc');
               setSkip(0);
             }}
           >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
-          </select>
-          <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={String(limit)}
-            onChange={(event) => {
-              setLimit(Number(event.target.value || 25));
-              setSkip(0);
-            }}
-          >
-            <option value="10">10 / page</option>
-            <option value="25">25 / page</option>
-            <option value="50">50 / page</option>
-            <option value="100">100 / page</option>
+            <option value="desc">Newest</option>
+            <option value="asc">Oldest</option>
           </select>
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             type="button"
             onClick={() => {
               setSkip(0);
               void load();
             }}
           >
-            Search
+            🔍
           </button>
         </div>
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Successful payments</h2>
+      <section className="overflow-hidden admin-surface">
+        <div className="border-b border-slate-200/80 px-5 py-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Successful payments</h2>
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p>
+          <p className="px-5 py-3 text-sm text-slate-500">Loading payments...</p>
         ) : (
           renderRows(successfulRows)
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Failed and pending payments</h2>
+      <section className="overflow-hidden admin-surface">
+        <div className="border-b border-slate-200/80 px-5 py-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Failed and pending payments</h2>
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p>
+          <p className="px-5 py-3 text-sm text-slate-500">Loading payments...</p>
         ) : (
           renderRows(failedOrPendingRows)
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between admin-surface">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
+            title="Previous page"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Previous
+            ←
           </button>
           <button
             type="button"
+            title="Next page"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Next
+            →
           </button>
         </div>
       </section>

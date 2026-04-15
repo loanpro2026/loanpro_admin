@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { CreateModal } from '@/components/admin/CreateModal';
 
 type UserRow = {
   _id?: string;
@@ -250,75 +251,83 @@ export default function UsersPage() {
           <h1 className="admin-title mt-4">Users</h1>
           <p className="admin-subtitle">Complete customer lifecycle control across MongoDB and Clerk.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            ['Total', String(total || rows.length)],
-            ['Visible', String(rows.length)],
-            ['Filter', status === 'all' ? 'All' : status],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-            </article>
-          ))}
+        <div className="flex items-end justify-between gap-3">
+          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+            {[
+              ['Total', String(total || rows.length)],
+              ['Visible', String(rows.length)],
+              ['Filter', status === 'all' ? 'All' : status],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+              </article>
+            ))}
+          </div>
+          <CreateModal
+            title="Create New User"
+            description="Add a new customer account and sync with Clerk"
+            icon="users"
+            onSubmit={createUser}
+            isLoading={creating}
+            disabled={!newUser.email.trim() || !newUser.reason.trim()}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Email Address *</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  type="email"
+                  placeholder="user@example.com"
+                  value={newUser.email}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Full Name *</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="John Doe"
+                  value={newUser.fullName}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, fullName: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Username (Optional)</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="johndoe"
+                  value={newUser.username}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, username: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Reason for Creation *</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="e.g., New customer signup, corporate account"
+                  value={newUser.reason}
+                  onChange={(event) => setNewUser((prev) => ({ ...prev, reason: event.target.value }))}
+                />
+              </div>
+            </div>
+          </CreateModal>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="users" /></span>
-          <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Create user</h2>
-            <p className="text-sm text-slate-500">Add new customer accounts and optionally sync them to Clerk.</p>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Email"
-            value={newUser.email}
-            onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
-          />
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Full name"
-            value={newUser.fullName}
-            onChange={(event) => setNewUser((prev) => ({ ...prev, fullName: event.target.value }))}
-          />
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Username (optional)"
-            value={newUser.username}
-            onChange={(event) => setNewUser((prev) => ({ ...prev, username: event.target.value }))}
-          />
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Reason"
-            value={newUser.reason}
-            onChange={(event) => setNewUser((prev) => ({ ...prev, reason: event.target.value }))}
-          />
-          <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            disabled={creating || !newUser.email.trim() || !newUser.reason.trim()}
-            onClick={() => void createUser()}
-          >
-            {creating ? 'Creating...' : 'Create User'}
-          </button>
-        </div>
-      </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-6">
+
+      <section className="admin-surface">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Filters</h2>
+        <div className="mt-4 grid gap-2 md:grid-cols-6">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search user ID, name, email"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as 'all' | 'active' | 'banned');
@@ -330,7 +339,7 @@ export default function UsersPage() {
             <option value="banned">Banned</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'email' | 'username');
@@ -343,7 +352,7 @@ export default function UsersPage() {
             <option value="username">Sort: Username</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as 'asc' | 'desc');
@@ -354,7 +363,7 @@ export default function UsersPage() {
             <option value="asc">Asc</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
             value={String(limit)}
             onChange={(event) => {
               setLimit(Number(event.target.value || 25));
@@ -367,29 +376,29 @@ export default function UsersPage() {
             <option value="100">100 / page</option>
           </select>
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             type="button"
             onClick={() => {
               setSkip(0);
               void load();
             }}
           >
-            Search
+            🔍
           </button>
         </div>
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">User records</h2>
+      <section className="overflow-hidden admin-surface">
+        <div className="border-b border-slate-200/80 px-5 py-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">User records</h2>
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading users...</p>
+          <p className="px-5 py-3 text-sm text-slate-500">Loading users...</p>
         ) : rows.length === 0 ? (
-          <p className="px-5 py-4 text-sm text-slate-500">No users found.</p>
+          <p className="px-5 py-3 text-sm text-slate-500">No users found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="admin-table min-w-full text-left text-sm">
@@ -424,27 +433,30 @@ export default function UsersPage() {
                       <div className="flex flex-wrap gap-2">
                         <button
                           type="button"
+                          title="Edit user"
                           disabled={updatingUserId === row.userId}
                           onClick={() => void editUser(row)}
-                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Edit
+                          ✏️
                         </button>
                         <button
                           type="button"
+                          title={row.banned ? 'Restore user' : 'Suspend user'}
                           disabled={updatingUserId === row.userId}
                           onClick={() => void toggleSuspension(row)}
-                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          {updatingUserId === row.userId ? 'Updating...' : row.banned ? 'Unsuspend' : 'Suspend'}
+                          {updatingUserId === row.userId ? '...' : row.banned ? '✓' : '⊗'}
                         </button>
                         <button
                           type="button"
+                          title="Delete user"
                           disabled={updatingUserId === row.userId}
                           onClick={() => void deleteUser(row)}
-                          className="admin-focus rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-sm text-red-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                          Delete
+                          🗑️
                         </button>
                       </div>
                     </td>
@@ -456,26 +468,28 @@ export default function UsersPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between admin-surface">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
+            title="Previous page"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Previous
+            ←
           </button>
           <button
-            type="button"
+            type="button" 
+            title="Next page"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Next
+            →
           </button>
         </div>
       </section>

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { CreateModal } from '@/components/admin/CreateModal';
 
 type SubscriptionRow = {
   _id: string;
@@ -209,114 +210,97 @@ export default function SubscriptionsPage() {
         <div>
           <span className="admin-chip">Subscription control</span>
           <h1 className="admin-title mt-4">Subscriptions</h1>
-          <p className="admin-subtitle">Monitor lifecycle state and create manual subscriptions for existing users.</p>
+          <p className="admin-subtitle">Monitor lifecycle state and manage subscription plans.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            ['Total', String(total || rows.length)],
-            ['Visible', String(rows.length)],
-            ['Manual', newSub.plan],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-            </article>
-          ))}
+        <div className="flex items-end justify-between gap-3">
+          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+            {[
+              ['Total', String(total || rows.length)],
+              ['Visible', String(rows.length)],
+              ['Status', status || 'All'],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+              </article>
+            ))}
+          </div>
+          <CreateModal
+            title="Create Manual Subscription"
+            description="Assign or extend a subscription plan for an existing user"
+            icon="subscriptions"
+            onSubmit={createSubscription}
+            isLoading={creating}
+            disabled={!newSub.userId || !newSub.remark.trim() || !newSub.reason.trim()}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Select User *</label>
+                <select
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  value={newSub.userId}
+                  onChange={(event) => setNewSub((prev) => ({ ...prev, userId: event.target.value }))}
+                >
+                  <option value="">Choose a user...</option>
+                  {users.map((user) => (
+                    <option key={user.userId} value={user.userId}>
+                      {user.fullName || user.username || user.userId} ({user.email || user.userId})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Plan</label>
+                  <select className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" value={newSub.plan} onChange={(event) => setNewSub((prev) => ({ ...prev, plan: event.target.value }))}>
+                    <option value="basic">basic</option>
+                    <option value="pro">pro</option>
+                    <option value="enterprise">enterprise</option>
+                    <option value="trial">trial</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Period</label>
+                  <select className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" value={newSub.billingPeriod} onChange={(event) => setNewSub((prev) => ({ ...prev, billingPeriod: event.target.value }))}>
+                    <option value="monthly">monthly</option>
+                    <option value="annually">annually</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Amount (INR)</label>
+                  <input type="number" className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" placeholder="0" value={newSub.amount} onChange={(event) => setNewSub((prev) => ({ ...prev, amount: event.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Remark *</label>
+                  <input className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" placeholder="e.g., Manual grant" value={newSub.remark} onChange={(event) => setNewSub((prev) => ({ ...prev, remark: event.target.value }))} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Start Date</label>
+                  <input type="date" className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" value={newSub.startDate} onChange={(event) => setNewSub((prev) => ({ ...prev, startDate: event.target.value }))} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">End Date</label>
+                  <input type="date" className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" value={newSub.endDate} onChange={(event) => setNewSub((prev) => ({ ...prev, endDate: event.target.value }))} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Reason for Creation *</label>
+                <input className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" placeholder="e.g., Customer upgrade, promo code" value={newSub.reason} onChange={(event) => setNewSub((prev) => ({ ...prev, reason: event.target.value }))} />
+              </div>
+            </div>
+          </CreateModal>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="subscriptions" /></span>
-          <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Create manual subscription</h2>
-            <p className="text-sm text-slate-500">Grant access with a reason-backed audit trail.</p>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-4">
-          <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={newSub.userId}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, userId: event.target.value }))}
-          >
-            <option value="">Select user</option>
-            {users.map((user) => (
-              <option key={user.userId} value={user.userId}>
-                {user.fullName || user.username || user.userId} ({user.email || user.userId})
-              </option>
-            ))}
-          </select>
 
-          <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={newSub.plan}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, plan: event.target.value }))}
-          >
-            <option value="basic">basic</option>
-            <option value="pro">pro</option>
-            <option value="enterprise">enterprise</option>
-            <option value="trial">trial</option>
-          </select>
 
-          <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={newSub.billingPeriod}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, billingPeriod: event.target.value }))}
-          >
-            <option value="monthly">monthly</option>
-            <option value="annually">annually</option>
-          </select>
-
-          <input
-            type="number"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Amount (INR)"
-            value={newSub.amount}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, amount: event.target.value }))}
-          />
-
-          <input
-            type="date"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={newSub.startDate}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, startDate: event.target.value }))}
-          />
-
-          <input
-            type="date"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={newSub.endDate}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, endDate: event.target.value }))}
-          />
-
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Remark (manual grant note)"
-            value={newSub.remark}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, remark: event.target.value }))}
-          />
-
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Reason"
-            value={newSub.reason}
-            onChange={(event) => setNewSub((prev) => ({ ...prev, reason: event.target.value }))}
-          />
-
-          <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-            type="button"
-            disabled={creating || !newSub.userId || !newSub.remark.trim() || !newSub.reason.trim()}
-            onClick={() => void createSubscription()}
-          >
-            {creating ? 'Creating...' : 'Create Subscription'}
-          </button>
-        </div>
-      </section>
-
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
+      <section className="admin-surface">
+        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Filters</h2>
+        <div className="mt-4 grid gap-2 md:grid-cols-6">
           <input
             className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search user, plan"
@@ -406,9 +390,9 @@ export default function SubscriptionsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Subscription records</h2>
+      <section className="overflow-hidden admin-surface">
+        <div className="border-b border-slate-200/80 px-5 py-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Subscription records</h2>
         </div>
 
         {loading ? (
@@ -444,16 +428,15 @@ export default function SubscriptionsPage() {
                       {row.startDate ? new Date(row.startDate).toLocaleDateString() : '-'} - {row.endDate ? new Date(row.endDate).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          disabled={updatingId === row._id}
-                          onClick={() => void updateStatus(row, row.status === 'cancelled' ? 'active' : 'cancelled')}
-                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {updatingId === row._id ? 'Updating...' : row.status === 'cancelled' ? 'Reactivate' : 'Cancel'}
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        title={row.status === 'cancelled' ? 'Reactivate subscription' : 'Cancel subscription'}
+                        disabled={updatingId === row._id}
+                        onClick={() => void updateStatus(row, row.status === 'cancelled' ? 'active' : 'cancelled')}
+                        className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {updatingId === row._id ? '...' : row.status === 'cancelled' ? '✓' : '⊗'}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -463,27 +446,11 @@ export default function SubscriptionsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
-        <p className="text-sm text-slate-600">
-          Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
-        </p>
+      <section className="flex items-center justify-between admin-surface">
+        <p className="text-sm text-slate-600">Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}</p>
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            disabled={loading || skip === 0}
-            onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Previous
-          </button>
-          <button
-            type="button"
-            disabled={loading || !hasMore}
-            onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            Next
-          </button>
+          <button type="button" title="Previous page" disabled={loading || skip === 0} onClick={() => setSkip((prev) => Math.max(0, prev - limit))} className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">←</button>
+          <button type="button" title="Next page" disabled={loading || !hasMore} onClick={() => setSkip((prev) => prev + limit)} className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">→</button>
         </div>
       </section>
     </main>

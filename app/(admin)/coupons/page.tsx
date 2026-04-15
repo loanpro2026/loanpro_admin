@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { CreateModal } from '@/components/admin/CreateModal';
 
 type CouponRow = {
   _id: string;
@@ -249,114 +250,140 @@ export default function CouponsPage() {
           <h1 className="admin-title mt-4">Coupons</h1>
           <p className="admin-subtitle">Create and manage coupon codes for manual discount operations.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {[
-            ['Total', String(total || rows.length)],
-            ['Visible', String(rows.length)],
-            ['Active', String(activeCount)],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-            </article>
-          ))}
+        <div className="flex items-end justify-between gap-3">
+          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+            {[
+              ['Total', String(total || rows.length)],
+              ['Visible', String(rows.length)],
+              ['Active', String(activeCount)],
+            ].map(([label, value]) => (
+              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+              </article>
+            ))}
+          </div>
+          <CreateModal
+            title="Create New Coupon"
+            description="Build a new promotional coupon code with audit trails"
+            icon="coupons"
+            onSubmit={createCoupon}
+            isLoading={submitting}
+            disabled={!form.code.trim() || !form.discountValue.trim() || !form.reason.trim()}
+          >
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Code *</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="e.g. APRIL50"
+                  value={form.code}
+                  onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Description</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="e.g. April spring sale"
+                  value={form.description}
+                  onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Type</label>
+                  <select
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    value={form.discountType}
+                    onChange={(event) => setForm((prev) => ({ ...prev, discountType: event.target.value }))}
+                  >
+                    <option value="percent">percent</option>
+                    <option value="fixed">fixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Value *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    placeholder="Discount amount"
+                    value={form.discountValue}
+                    onChange={(event) => setForm((prev) => ({ ...prev, discountValue: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Min Order Amount</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    placeholder="0"
+                    value={form.minOrderAmount}
+                    onChange={(event) => setForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Max Discount Amount</label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    placeholder="No limit"
+                    value={form.maxDiscountAmount}
+                    onChange={(event) => setForm((prev) => ({ ...prev, maxDiscountAmount: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Usage Limit</label>
+                  <input
+                    type="number"
+                    min="1"
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    placeholder="Unlimited"
+                    value={form.usageLimit}
+                    onChange={(event) => setForm((prev) => ({ ...prev, usageLimit: event.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Valid Until</label>
+                  <input
+                    type="date"
+                    className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                    value={form.validUntil}
+                    onChange={(event) => setForm((prev) => ({ ...prev, validUntil: event.target.value }))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Applicable Plans</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="Comma separated (e.g. basic, pro)"
+                  value={form.appliesToPlans}
+                  onChange={(event) => setForm((prev) => ({ ...prev, appliesToPlans: event.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1">Reason for Creation *</label>
+                <input
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+                  placeholder="e.g., Marketing campaign, special offer"
+                  value={form.reason}
+                  onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
+                />
+              </div>
+            </div>
+          </CreateModal>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="coupons" /></span>
-          <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Create coupon</h2>
-            <p className="text-sm text-slate-500">Build manual promotions with reason-backed audit logging.</p>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-4">
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Code (e.g. APRIL50)"
-            value={form.code}
-            onChange={(event) => setForm((prev) => ({ ...prev, code: event.target.value }))}
-          />
-          <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={form.discountType}
-            onChange={(event) => setForm((prev) => ({ ...prev, discountType: event.target.value }))}
-          >
-            <option value="percent">percent</option>
-            <option value="fixed">fixed</option>
-          </select>
-          <input
-            type="number"
-            min="0"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Discount value"
-            value={form.discountValue}
-            onChange={(event) => setForm((prev) => ({ ...prev, discountValue: event.target.value }))}
-          />
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Description"
-            value={form.description}
-            onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
-          />
-
-          <input
-            type="number"
-            min="0"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Min order amount"
-            value={form.minOrderAmount}
-            onChange={(event) => setForm((prev) => ({ ...prev, minOrderAmount: event.target.value }))}
-          />
-          <input
-            type="number"
-            min="0"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Max discount amount"
-            value={form.maxDiscountAmount}
-            onChange={(event) => setForm((prev) => ({ ...prev, maxDiscountAmount: event.target.value }))}
-          />
-          <input
-            type="number"
-            min="1"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Usage limit"
-            value={form.usageLimit}
-            onChange={(event) => setForm((prev) => ({ ...prev, usageLimit: event.target.value }))}
-          />
-          <input
-            type="date"
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={form.validUntil}
-            onChange={(event) => setForm((prev) => ({ ...prev, validUntil: event.target.value }))}
-          />
-
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200 md:col-span-2"
-            placeholder="Applicable plans (comma separated)"
-            value={form.appliesToPlans}
-            onChange={(event) => setForm((prev) => ({ ...prev, appliesToPlans: event.target.value }))}
-          />
-          <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200 md:col-span-2"
-            placeholder="Reason (required)"
-            value={form.reason}
-            onChange={(event) => setForm((prev) => ({ ...prev, reason: event.target.value }))}
-          />
-
-          <button
-            type="button"
-            disabled={submitting || !form.code.trim() || !form.discountValue.trim() || !form.reason.trim()}
-            onClick={() => void createCoupon()}
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {submitting ? 'Creating...' : 'Create Coupon'}
-          </button>
-        </div>
-      </section>
-
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+<section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
         <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
