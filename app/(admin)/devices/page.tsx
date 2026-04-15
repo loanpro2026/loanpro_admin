@@ -91,10 +91,13 @@ export default function DevicesPage() {
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+      <section className="admin-surface">
         <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="devices" /></span>
-          <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700"><AdminIcon name="devices" size={18} /></span>
+          <div>
+            <h2 className="font-semibold text-slate-950">Filters</h2>
+            <p className="text-xs text-slate-500">Search users or device IDs, then apply trust actions.</p>
+          </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
@@ -114,18 +117,18 @@ export default function DevicesPage() {
             <option value="inactive">Inactive</option>
           </select>
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             type="button"
             onClick={() => void load()}
           >
-            Search
+            Apply
           </button>
         </div>
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden admin-surface">
         <div className="border-b border-slate-200/80 px-5 py-4">
           <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Device records</h2>
         </div>

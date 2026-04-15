@@ -172,7 +172,8 @@ export default function AnalyticsPage() {
                   <h3 className="font-semibold text-amber-900">Google Analytics not configured</h3>
                   <p className="mt-1 text-sm text-amber-800">
                     Set up Google Analytics credentials to enable real visitor tracking. Required env: GOOGLE_ANALYTICS_PROPERTY_ID, GOOGLE_SERVICE_ACCOUNT_EMAIL,
-                    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY
+                    GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY. Paste the service account private key from the JSON file, keep it wrapped in double quotes, and replace
+                    real line breaks with literal \n sequences.
                   </p>
                 </div>
               </div>

@@ -169,10 +169,11 @@ export default function PaymentsPage() {
                 <td className="px-5 py-3 text-slate-700">{row.status || '-'}</td>
                 <td className="px-5 py-3 text-slate-700">{row.refundStatus || '-'}</td>
                 <td className="px-5 py-3">
-                  <div className="flex flex-wrap gap-1">
+                  <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       title="Mark for refund review"
+                      aria-label="Mark for refund review"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund review request');
@@ -186,13 +187,14 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      🔍
+                      Review
                     </button>
                     <button
                       type="button"
                       title="Approve refund"
+                      aria-label="Approve refund"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund approval');
@@ -207,13 +209,14 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      ✓
+                      Approve
                     </button>
                     <button
                       type="button"
                       title="Reconcile payment"
+                      aria-label="Reconcile payment"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('payment reconciliation');
@@ -227,9 +230,9 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      🔄
+                      Reconcile
                     </button>
                   </div>
                 </td>
@@ -324,7 +327,7 @@ export default function PaymentsPage() {
               void load();
             }}
           >
-            🔍
+            Apply
           </button>
         </div>
       </section>

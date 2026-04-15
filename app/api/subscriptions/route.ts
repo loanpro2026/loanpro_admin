@@ -7,6 +7,10 @@ import { requireApiPermission } from '@/server/api/guards';
 import { createManualSubscription, listSubscriptions } from '@/server/repositories/subscriptions';
 import { writeAuditLog } from '@/server/services/audit-log';
 import { getCachedResponse, invalidateCacheByPrefixes, setCachedResponse } from '@/server/services/response-cache';
+import { getAdminDb } from '@/lib/db/mongo';
+import { getPlanPricing } from '@/lib/planConfig';
+import { calculatePlanAmountRupees, type PaidPlanName } from '@/lib/pricing';
+import { getCouponQuote } from '@/lib/couponUtils';
 
 const createSubscriptionSchema = z.object({
   userId: z.string().trim().min(1),
@@ -16,7 +20,10 @@ const createSubscriptionSchema = z.object({
   amount: z.number().nonnegative().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
-  remark: z.string().trim().min(3).max(240),
+  paymentId: z.string().trim().max(240).optional(),
+  couponCode: z.string().trim().max(32).optional(),
+  replaceExistingActive: z.boolean().optional(),
+  remark: z.string().trim().min(3).max(240).optional(),
   reason: z.string().trim().min(3).max(240),
 });
 
@@ -97,15 +104,70 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: 'Invalid endDate' }, { status: 400 });
   }
 
+  // Compute pricing if not provided
+  let computedAmount = payload.amount;
+  let baseAmount = 0;
+  let discountAmount = 0;
+  let appliedCoupon: string | undefined = undefined;
+
+  const plan = String(payload.plan).toLowerCase();
+  const isPaidPlan = plan !== 'trial';
+
+  if (isPaidPlan && (payload.amount === undefined || payload.couponCode)) {
+    // Fetch pricing config and compute amount
+    const db = await getAdminDb();
+    const pricing = await getPlanPricing(db);
+    const normalizedPlan = (plan.charAt(0).toUpperCase() + plan.slice(1).toLowerCase()) as PaidPlanName;
+    const monthlyPrice = pricing[normalizedPlan] || 0;
+
+    if (!monthlyPrice) {
+      return NextResponse.json(
+        { success: false, error: `No pricing configured for plan '${normalizedPlan}'` },
+        { status: 400 }
+      );
+    }
+
+    baseAmount = calculatePlanAmountRupees(monthlyPrice, payload.billingPeriod as 'monthly' | 'annually');
+
+    if (payload.couponCode) {
+      const couponQuote = await getCouponQuote(db, {
+        couponCode: payload.couponCode,
+        plan: normalizedPlan,
+        billingPeriod: payload.billingPeriod as 'monthly' | 'annually',
+        subtotal: baseAmount,
+      });
+
+      if (payload.couponCode && !couponQuote.applied) {
+        return NextResponse.json(
+          { success: false, error: couponQuote.message || 'Coupon could not be applied' },
+          { status: 400 }
+        );
+      }
+
+      computedAmount = couponQuote.totalAmount;
+      discountAmount = couponQuote.discountAmount;
+      appliedCoupon = couponQuote.coupon?.code || undefined;
+    } else {
+      computedAmount = baseAmount;
+      discountAmount = 0;
+    }
+  }
+
   const created = await createManualSubscription({
     userId: payload.userId,
     plan: payload.plan,
     billingPeriod: payload.billingPeriod,
     status: payload.status,
-    amount: payload.amount,
+    amount: computedAmount,
+    baseAmount: isPaidPlan ? baseAmount : 0,
+    discountAmount: isPaidPlan ? discountAmount : 0,
     startDate,
     endDate,
-    remark: payload.remark,
+    remark: payload.remark || 'Provisioned from admin panel',
+    paymentId: payload.paymentId,
+    couponCode: appliedCoupon,
+    replaceExistingActive: payload.replaceExistingActive,
+    createdByAdmin: sessionResult.session.email,
   });
 
   if (!created.ok) {
@@ -124,6 +186,11 @@ export async function POST(request: NextRequest) {
       plan: payload.plan,
       billingPeriod: payload.billingPeriod,
       status: payload.status || 'active',
+      amount: computedAmount,
+      baseAmount: isPaidPlan ? baseAmount : 0,
+      discountAmount: isPaidPlan ? discountAmount : 0,
+      couponCode: appliedCoupon,
+      paymentId: payload.paymentId,
       remark: payload.remark,
       supersededCount: created.data.supersededCount,
     },

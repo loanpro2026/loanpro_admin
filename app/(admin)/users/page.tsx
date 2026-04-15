@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
-import { CreateModal } from '@/components/admin/CreateModal';
 
 type UserRow = {
   _id?: string;
@@ -35,13 +34,6 @@ export default function UsersPage() {
   const [hasMore, setHasMore] = useState(false);
   const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'email' | 'username'>('createdAt');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-  const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({
-    email: '',
-    fullName: '',
-    username: '',
-    reason: '',
-  });
 
   const load = async () => {
     setLoading(true);
@@ -108,37 +100,6 @@ export default function UsersPage() {
   useEffect(() => {
     void load();
   }, [skip, sortBy, sortDir, limit]);
-
-  const createUser = async () => {
-    setCreating(true);
-    setError('');
-    try {
-      const response = await fetch('/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: newUser.email.trim(),
-          fullName: newUser.fullName.trim(),
-          username: newUser.username.trim() || undefined,
-          reason: newUser.reason.trim(),
-          syncWithClerk: true,
-          sendPasswordSetup: true,
-        }),
-      });
-
-      const payload = await response.json();
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.error || 'Failed to create user');
-      }
-
-      setNewUser({ email: '', fullName: '', username: '', reason: '' });
-      await load();
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : 'Failed to create user');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   const editUser = async (row: UserRow) => {
     const fullName = (window.prompt('Full name:', row.fullName || row.username || '') || '').trim();
@@ -249,7 +210,7 @@ export default function UsersPage() {
         <div>
           <span className="admin-chip">Customer operations</span>
           <h1 className="admin-title mt-4">Users</h1>
-          <p className="admin-subtitle">Complete customer lifecycle control across MongoDB and Clerk.</p>
+          <p className="admin-subtitle">Manage customer lifecycle records. New users are created from the web portal to keep Clerk and MongoDB creation in one flow.</p>
         </div>
         <div className="flex items-end justify-between gap-3">
           <div className="grid gap-3 sm:grid-cols-3 flex-1">
@@ -264,54 +225,9 @@ export default function UsersPage() {
               </article>
             ))}
           </div>
-          <CreateModal
-            title="Create New User"
-            description="Add a new customer account and sync with Clerk"
-            icon="users"
-            onSubmit={createUser}
-            isLoading={creating}
-            disabled={!newUser.email.trim() || !newUser.reason.trim()}
-          >
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Email Address *</label>
-                <input
-                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
-                  type="email"
-                  placeholder="user@example.com"
-                  value={newUser.email}
-                  onChange={(event) => setNewUser((prev) => ({ ...prev, email: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Full Name *</label>
-                <input
-                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
-                  placeholder="John Doe"
-                  value={newUser.fullName}
-                  onChange={(event) => setNewUser((prev) => ({ ...prev, fullName: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Username (Optional)</label>
-                <input
-                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
-                  placeholder="johndoe"
-                  value={newUser.username}
-                  onChange={(event) => setNewUser((prev) => ({ ...prev, username: event.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-900 mb-1">Reason for Creation *</label>
-                <input
-                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
-                  placeholder="e.g., New customer signup, corporate account"
-                  value={newUser.reason}
-                  onChange={(event) => setNewUser((prev) => ({ ...prev, reason: event.target.value }))}
-                />
-              </div>
-            </div>
-          </CreateModal>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600">
+            Customer onboarding is handled in the web portal.
+          </div>
         </div>
       </header>
 

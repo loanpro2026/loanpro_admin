@@ -1,6 +1,7 @@
 'use client';
 
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AdminIcon } from './AdminIcons';
 
 interface CreateModalProps {
@@ -10,6 +11,7 @@ interface CreateModalProps {
   onSubmit: () => Promise<void>;
   isLoading: boolean;
   children: ReactNode;
+  openDisabled?: boolean;
   disabled?: boolean;
   icon?: 'users' | 'subscriptions' | 'coupons' | 'payments' | 'team';
 }
@@ -21,10 +23,16 @@ export function CreateModal({
   onSubmit,
   isLoading,
   children,
+  openDisabled = false,
   disabled = false,
   icon = 'users',
 }: CreateModalProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -39,7 +47,7 @@ export function CreateModal({
     <>
       <button
         type="button"
-        disabled={disabled || isLoading}
+        disabled={openDisabled}
         onClick={() => setOpen(true)}
         className="admin-focus inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         title={description}
@@ -48,49 +56,56 @@ export function CreateModal({
         <span>{buttonText}</span>
       </button>
 
-      {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm transition-opacity">
-          <div className="w-full max-w-2xl rounded-[24px] border border-slate-200 bg-white p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-            {/* Header */}
-            <div className="mb-6 flex items-start justify-between">
-              <div>
-                <h2 className="font-display text-2xl font-semibold text-slate-950">{title}</h2>
-                <p className="mt-1 text-sm text-slate-600">{description}</p>
+      {mounted && open
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-sm transition-opacity"
+              onMouseDown={(event) => {
+                if (event.target === event.currentTarget) {
+                  setOpen(false);
+                }
+              }}
+            >
+              <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-6 shadow-xl">
+                <div className="mb-6 flex items-start justify-between">
+                  <div>
+                    <h2 className="font-display text-2xl font-semibold text-slate-950">{title}</h2>
+                    <p className="mt-1 text-sm text-slate-600">{description}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-slate-600 shadow-sm transition hover:bg-slate-50"
+                    aria-label="Close modal"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mb-6">{children}</div>
+
+                <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
+                  <button
+                    type="button"
+                    onClick={() => setOpen(false)}
+                    className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isLoading || disabled}
+                    onClick={() => void handleSubmit()}
+                    className="admin-focus rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isLoading ? 'Creating...' : 'Create'}
+                  </button>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-slate-600 shadow-sm transition hover:bg-slate-50"
-                aria-label="Close modal"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Content */}
-            <div className="mb-6">{children}</div>
-
-            {/* Actions */}
-            <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-6">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isLoading}
-                onClick={() => void handleSubmit()}
-                className="admin-focus rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isLoading ? 'Creating...' : 'Create'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </div>,
+            document.body
+          )
+        : null}
     </>
   );
 }

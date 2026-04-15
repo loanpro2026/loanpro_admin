@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type NotificationRow = {
   _id?: string;
@@ -172,12 +173,10 @@ export function AdminNotificationsBell() {
       <button
         type="button"
         onClick={() => setOpen((prev) => !prev)}
-        className="admin-focus relative inline-flex h-10 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50"
+        className="admin-focus relative inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:bg-slate-50"
+        aria-label="Notifications"
       >
-        <span className="flex items-center gap-2">
-          <span className="hidden sm:inline">Notifications</span>
-          <span className="sm:hidden">Alerts</span>
-        </span>
+        <AdminIcon name="bell" size={18} className="text-slate-600" />
         {badgeText ? (
           <span className="absolute -right-2 -top-2 rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm">
             {badgeText}

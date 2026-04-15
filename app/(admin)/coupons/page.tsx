@@ -383,8 +383,14 @@ export default function CouponsPage() {
         </div>
       </header>
 
-<section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
+      <section className="admin-surface">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><AdminIcon name="coupons" size={18} /></span>
+          <div>
+            <h2 className="font-semibold text-slate-950">Filters</h2>
+            <p className="text-xs text-slate-500">Search, sort, and review coupon lifecycle states.</p>
+          </div>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
             className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
@@ -444,7 +450,7 @@ export default function CouponsPage() {
             <option value="100">100 / page</option>
           </select>
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
             type="button"
             onClick={() => {
               setSkip(0);

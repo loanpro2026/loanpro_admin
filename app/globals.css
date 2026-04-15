@@ -16,10 +16,7 @@
     min-height: 100vh;
     color: #0f172a;
     font-family: var(--font-manrope), "Segoe UI", "Helvetica Neue", Arial, sans-serif;
-    background:
-      radial-gradient(circle at top left, rgba(37, 99, 235, 0.16), transparent 28%),
-      radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 24%),
-      linear-gradient(180deg, #eef4ff 0%, #f8fafc 22%, #f8fafc 100%);
+    background: #f6f8fb;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -37,11 +34,11 @@
 
 @layer components {
   .admin-surface {
-    @apply rounded-[24px] border border-slate-200 bg-white shadow-sm;
+    @apply rounded-2xl border border-slate-200 bg-white;
   }
 
   .admin-chip {
-    @apply inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600;
+    @apply inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-600;
   }
 
   .admin-muted {
@@ -49,7 +46,7 @@
   }
 
   .admin-title {
-    @apply font-display text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl;
+    @apply font-display text-2xl font-semibold tracking-tight text-slate-950 sm:text-[2rem];
   }
 
   .admin-subtitle {
@@ -61,7 +58,7 @@
   }
 
   .admin-alert {
-    @apply rounded-2xl border px-4 py-3 text-sm shadow-sm;
+    @apply rounded-xl border px-4 py-3 text-sm;
   }
 
   .admin-table {

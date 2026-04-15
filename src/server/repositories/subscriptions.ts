@@ -57,9 +57,15 @@ export type ManualSubscriptionInput = {
   billingPeriod: 'monthly' | 'annually';
   status?: 'active' | 'trial' | 'cancelled' | 'expired' | 'superseded' | 'active_subscription';
   amount?: number;
+  baseAmount?: number;
+  discountAmount?: number;
   startDate?: Date;
   endDate?: Date;
   remark?: string;
+  paymentId?: string;
+  couponCode?: string;
+  replaceExistingActive?: boolean;
+  createdByAdmin?: string;
 };
 
 export async function listSubscriptions(filters: SubscriptionListFilters) {
@@ -179,24 +185,66 @@ export async function createManualSubscription(input: ManualSubscriptionInput) {
   const now = new Date();
   const startDate = input.startDate ? new Date(input.startDate) : now;
   const billingPeriod = normalizeBillingPeriod(input.billingPeriod);
-  const status = String(input.status || 'active').trim().toLowerCase();
   const plan = normalizePlan(String(input.plan || '').trim());
+  const isPaidPlan = plan !== 'trial';
+  const normalizedStatus = String(input.status || (isPaidPlan ? 'active' : 'trial')).trim().toLowerCase();
+  const status = normalizedStatus === 'active_subscription' ? 'active_subscription' : normalizedStatus;
   const endDate = input.endDate ? new Date(input.endDate) : computeEndDate(startDate, billingPeriod);
+  const replaceExistingActive = input.replaceExistingActive !== false;
 
-  const superseded = await db.collection('subscriptions').updateMany(
-    {
-      userId,
-      status: { $in: ['active', 'trial', 'active_subscription'] },
-    },
-    {
-      $set: {
-        status: 'superseded',
-        supersededDate: now,
-        supersededReason: 'Replaced by admin manual subscription',
-        updatedAt: now,
+  let supersededCount = 0;
+  if (replaceExistingActive && isPaidPlan) {
+    const superseded = await db.collection('subscriptions').updateMany(
+      {
+        userId,
+        status: { $in: ['active', 'trial', 'active_subscription'] },
+        plan: { $ne: 'trial' },
       },
+      {
+        $set: {
+          status: 'superseded',
+          supersededDate: now,
+          supersededReason: 'Replaced by admin-created paid subscription',
+          updatedAt: now,
+        },
+      }
+    );
+    supersededCount = superseded.modifiedCount;
+
+    if (supersededCount === 0) {
+      await db.collection('subscriptions').updateMany(
+        {
+          userId,
+          status: 'trial',
+          plan: 'trial',
+        },
+        {
+          $set: {
+            status: 'completed',
+            completedDate: now,
+            completedReason: 'Trial converted to paid subscription via admin panel',
+            updatedAt: now,
+          },
+        }
+      );
     }
-  );
+  } else if (replaceExistingActive) {
+    const superseded = await db.collection('subscriptions').updateMany(
+      {
+        userId,
+        status: { $in: ['active', 'active_subscription'] },
+      },
+      {
+        $set: {
+          status: 'superseded',
+          supersededDate: now,
+          supersededReason: 'Replaced by admin-created trial subscription',
+          updatedAt: now,
+        },
+      }
+    );
+    supersededCount = superseded.modifiedCount;
+  }
 
   const shouldActivateAccess = ['active', 'trial', 'active_subscription'].includes(status);
   const accessToken = shouldActivateAccess ? crypto.randomBytes(48).toString('hex') : null;
@@ -206,10 +254,16 @@ export async function createManualSubscription(input: ManualSubscriptionInput) {
     status,
     billingPeriod,
     amount: Number.isFinite(Number(input.amount)) ? Number(input.amount) : 0,
+    baseAmount: Number.isFinite(Number(input.baseAmount)) ? Number(input.baseAmount) : 0,
+    discountAmount: Number.isFinite(Number(input.discountAmount)) ? Number(input.discountAmount) : 0,
+    couponCode: String(input.couponCode || '').trim().toUpperCase() || null,
     startDate,
     endDate,
-    paymentId: null,
-    source: 'admin_manual',
+    gracePeriodEndsAt: new Date(endDate.getTime() + 15 * 24 * 60 * 60 * 1000),
+    paymentId: String(input.paymentId || '').trim() || null,
+    createdByAdmin: String(input.createdByAdmin || '').trim() || null,
+    source: 'admin_panel',
+    flowType: 'website-like-provision',
     manualRemark: String(input.remark || '').trim(),
     createdAt: now,
     updatedAt: now,
@@ -223,6 +277,8 @@ export async function createManualSubscription(input: ManualSubscriptionInput) {
         $set: {
           accessToken,
           status: 'active_subscription',
+          lastSubscribedAt: now,
+          subscriptionPlan: plan,
           updatedAt: now,
         },
       }
@@ -241,6 +297,7 @@ export async function createManualSubscription(input: ManualSubscriptionInput) {
             accessToken: null,
             status: 'cancelled_subscription',
             cancelledDate: now,
+            subscriptionPlan: plan,
             updatedAt: now,
           },
         }
@@ -254,7 +311,7 @@ export async function createManualSubscription(input: ManualSubscriptionInput) {
       ...doc,
       _id: insertResult.insertedId,
       accessToken,
-      supersededCount: superseded.modifiedCount,
+      supersededCount,
     },
   };
 }

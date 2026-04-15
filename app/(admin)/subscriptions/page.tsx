@@ -226,12 +226,12 @@ export default function SubscriptionsPage() {
             ))}
           </div>
           <CreateModal
-            title="Create Manual Subscription"
-            description="Assign or extend a subscription plan for an existing user"
+            title="Provision Subscription"
+            description="Create subscription for an existing portal user using website-like provisioning semantics"
             icon="subscriptions"
             onSubmit={createSubscription}
             isLoading={creating}
-            disabled={!newSub.userId || !newSub.remark.trim() || !newSub.reason.trim()}
+            disabled={!newSub.userId || !newSub.reason.trim()}
           >
             <div className="space-y-4">
               <div>
@@ -273,7 +273,7 @@ export default function SubscriptionsPage() {
                   <input type="number" className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" placeholder="0" value={newSub.amount} onChange={(event) => setNewSub((prev) => ({ ...prev, amount: event.target.value }))} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-900 mb-1">Remark *</label>
+                  <label className="block text-sm font-medium text-slate-900 mb-1">Remark</label>
                   <input className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200" placeholder="e.g., Manual grant" value={newSub.remark} onChange={(event) => setNewSub((prev) => ({ ...prev, remark: event.target.value }))} />
                 </div>
               </div>
