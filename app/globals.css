@@ -108,4 +108,46 @@
       min-height: 2.25rem;
     }
   }
+
+  @media (max-width: 390px) {
+    :where(main[class*='p-4']) {
+      padding-left: 0.75rem !important;
+      padding-right: 0.75rem !important;
+    }
+
+    .admin-title {
+      font-size: 1.35rem;
+      line-height: 1.15;
+    }
+
+    .admin-chip {
+      padding: 0.2rem 0.55rem;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+    }
+
+    .admin-alert {
+      padding: 0.625rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+
+    :where(main) :is(input.admin-focus, select.admin-focus, button.admin-focus, textarea.admin-focus) {
+      font-size: 0.8125rem;
+      padding-left: 0.7rem;
+      padding-right: 0.7rem;
+    }
+
+    :where(main) > section.flex.items-center.justify-between {
+      flex-wrap: wrap;
+      row-gap: 0.5rem;
+    }
+
+    :where(main) > section.flex.items-center.justify-between > :first-child {
+      width: 100%;
+    }
+
+    .admin-table {
+      min-width: 42rem;
+    }
+  }
 }

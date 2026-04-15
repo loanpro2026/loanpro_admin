@@ -142,7 +142,7 @@ export default function PaymentsPage() {
     }
 
     return (
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
         <table className="admin-table min-w-full text-left text-sm">
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
@@ -245,9 +245,9 @@ export default function PaymentsPage() {
   };
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Revenue operations</span>
           <h1 className="admin-title mt-4">Payments</h1>
           <p className="admin-subtitle">Monitor payment events and handle refund/reconciliation actions.</p>
@@ -258,7 +258,7 @@ export default function PaymentsPage() {
             ['Visible', String(rows.length)],
             ['Failed/Pending', String(failedOrPendingRows.length)],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
               <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
             </article>
@@ -266,23 +266,23 @@ export default function PaymentsPage() {
         </div>
       </header>
 
-      <section className="admin-surface">
+      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><AdminIcon name="payments" size={18} /></span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><AdminIcon name="payments" size={18} /></span>
           <div>
-            <h2 className="font-semibold text-slate-950">Filters</h2>
+            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
             <p className="text-xs text-slate-500">Search, sort, and isolate payment states.</p>
           </div>
         </div>
         <div className="mt-4 grid gap-2 md:grid-cols-5">
           <input
-            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search by payment/user/order"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
           />
           <select
-            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value);
@@ -296,7 +296,7 @@ export default function PaymentsPage() {
             <option value="refunded">Refunded</option>
           </select>
           <select
-            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'amount' | 'status');
@@ -309,7 +309,7 @@ export default function PaymentsPage() {
             <option value="status">Status</option>
           </select>
           <select
-            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as 'asc' | 'desc');
@@ -320,7 +320,7 @@ export default function PaymentsPage() {
             <option value="asc">Oldest</option>
           </select>
           <button
-            className="admin-focus rounded-xl bg-brand-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
+            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
             type="button"
             onClick={() => {
               setSkip(0);
@@ -334,8 +334,8 @@ export default function PaymentsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden admin-surface">
-        <div className="border-b border-slate-200/80 px-5 py-3">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Successful payments</h2>
         </div>
 
@@ -346,8 +346,8 @@ export default function PaymentsPage() {
         )}
       </section>
 
-      <section className="overflow-hidden admin-surface">
-        <div className="border-b border-slate-200/80 px-5 py-3">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Failed and pending payments</h2>
         </div>
 

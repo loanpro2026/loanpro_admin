@@ -138,23 +138,29 @@ export default function AuditLogsPage() {
   };
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Audit trail</span>
           <h1 className="admin-title mt-4">Audit Logs</h1>
           <p className="admin-subtitle">Review privileged admin actions with actor, reason, and timestamp details.</p>
         </div>
-        <div className="flex gap-3">
-          <div className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+        <div className="flex gap-3 lg:justify-self-end">
+          <div className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Entries</p>
             <p className="mt-2 font-display text-xl font-semibold text-slate-950">{total || rows.length}</p>
           </div>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
-        <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Filters</h2>
+      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="audit-logs" size={18} /></span>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+            <p className="text-xs text-slate-500">Slice events by actor, action, resource, and date range.</p>
+          </div>
+        </div>
         <div className="mt-4 grid gap-3 md:grid-cols-5">
           <input
             className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
@@ -222,9 +228,9 @@ export default function AuditLogsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Recent events</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Recent events</h2>
         </div>
 
         {loading ? (
@@ -232,7 +238,7 @@ export default function AuditLogsPage() {
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No audit events found.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
@@ -262,7 +268,7 @@ export default function AuditLogsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>

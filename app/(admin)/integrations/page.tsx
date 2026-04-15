@@ -96,14 +96,14 @@ export default function IntegrationsPage() {
   }, [payload]);
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Dependency health</span>
           <h1 className="admin-title mt-4">Integrations</h1>
           <p className="admin-subtitle">Operational health matrix for third-party and platform dependencies.</p>
         </div>
-        <button type="button" onClick={() => void load()} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5">
+        <button type="button" onClick={() => void load()} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 lg:justify-self-end">
           Run Health Check
         </button>
       </header>
@@ -111,27 +111,27 @@ export default function IntegrationsPage() {
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Integrations</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{summary.total}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Healthy</p>
           <p className="mt-2 text-2xl font-semibold text-emerald-700">{summary.healthy}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Degraded</p>
           <p className="mt-2 text-2xl font-semibold text-amber-700">{summary.degraded}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Missing Config</p>
           <p className="mt-2 text-2xl font-semibold text-slate-700">{summary.missing}</p>
         </article>
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Health Matrix</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Health Matrix</h2>
         </div>
 
         {loading ? (
@@ -139,7 +139,7 @@ export default function IntegrationsPage() {
         ) : !payload || payload.data.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No integration data available.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
@@ -168,9 +168,9 @@ export default function IntegrationsPage() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Usage and Limits</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Usage and Limits</h2>
         </div>
 
         {loading ? (
@@ -178,7 +178,7 @@ export default function IntegrationsPage() {
         ) : !usagePayload || usagePayload.data.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No usage data available.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>

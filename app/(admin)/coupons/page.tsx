@@ -243,15 +243,15 @@ export default function CouponsPage() {
   };
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Discount control</span>
           <h1 className="admin-title mt-4">Coupons</h1>
           <p className="admin-subtitle">Create and manage coupon codes for manual discount operations.</p>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
               ['Total', String(total || rows.length)],
               ['Visible', String(rows.length)],
@@ -384,16 +384,16 @@ export default function CouponsPage() {
       </header>
 
       <section className="admin-surface">
-        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><AdminIcon name="coupons" size={18} /></span>
           <div>
-            <h2 className="font-semibold text-slate-950">Filters</h2>
+              <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
             <p className="text-xs text-slate-500">Search, sort, and review coupon lifecycle states.</p>
           </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-4">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+              className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
             placeholder="Search code or description"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -464,9 +464,9 @@ export default function CouponsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Coupon records</h2>
+            <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Coupon records</h2>
         </div>
 
         {loading ? (
@@ -474,7 +474,7 @@ export default function CouponsPage() {
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No coupons found.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
@@ -561,7 +561,7 @@ export default function CouponsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>

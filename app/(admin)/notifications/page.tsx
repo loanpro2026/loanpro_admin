@@ -177,26 +177,26 @@ export default function NotificationsPage() {
     : [{ label: 'All notifications', items: rows }];
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Live signal center</span>
           <h1 className="admin-title mt-4">Notifications</h1>
           <p className="admin-subtitle">Live admin activity stream generated from database-changing operations.</p>
         </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <article className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+          <article className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Visible</p>
             <p className="mt-2 font-display text-xl font-semibold text-slate-950">{rows.length}</p>
           </article>
-          <article className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+          <article className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Unread</p>
             <p className="mt-2 font-display text-xl font-semibold text-slate-950">{unreadTotal}</p>
           </article>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="notifications" /></span>
           <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
@@ -271,9 +271,9 @@ export default function NotificationsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/85 shadow-sm">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
         <div className="border-b border-slate-200/80 px-5 py-4">
-          <h2 className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">Event stream</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Event stream</h2>
         </div>
 
         {loading ? (
@@ -348,7 +348,7 @@ export default function NotificationsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/85 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>

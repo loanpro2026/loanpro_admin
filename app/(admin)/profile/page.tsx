@@ -87,18 +87,24 @@ export default function ProfilePage() {
   };
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
         <span className="admin-chip">Account center</span>
         <h1 className="admin-title mt-4">Profile</h1>
         <p className="admin-subtitle">Manage your admin identity, preferences, and notification settings.</p>
+        </div>
+        <div className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm lg:justify-self-end">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Role</p>
+          <p className="mt-2 font-display text-xl font-semibold text-slate-950">{profile?.role || 'Admin'}</p>
+        </div>
       </header>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
       {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
 
       {loading ? (
-        <p className="admin-surface px-5 py-4 text-sm text-slate-500">Loading profile...</p>
+        <p className="rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 text-sm text-slate-500 shadow-sm">Loading profile...</p>
       ) : profile ? (
         <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
           <section className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-slate-950 via-slate-900 to-brand-900 p-6 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
@@ -140,7 +146,7 @@ export default function ProfilePage() {
           </section>
 
           <section className="space-y-5">
-            <form className="space-y-5 rounded-[28px] border border-slate-200 bg-white/85 p-6 shadow-sm" onSubmit={save}>
+            <form className="space-y-5 rounded-[28px] border border-slate-200 bg-white/88 p-6 shadow-sm" onSubmit={save}>
               <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
                   <AdminIcon name="profile" />
@@ -209,7 +215,7 @@ export default function ProfilePage() {
               </div>
             </form>
 
-            <section className="rounded-[28px] border border-slate-200 bg-white/85 p-6 shadow-sm">
+            <section className="rounded-[28px] border border-slate-200 bg-white/88 p-6 shadow-sm">
               <h2 className="font-display text-xl font-semibold text-slate-950">Account Activity</h2>
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 {[

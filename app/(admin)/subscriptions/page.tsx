@@ -205,26 +205,25 @@ export default function SubscriptionsPage() {
   };
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Subscription control</span>
           <h1 className="admin-title mt-4">Subscriptions</h1>
           <p className="admin-subtitle">Monitor lifecycle state and manage subscription plans.</p>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <div className="grid gap-3 sm:grid-cols-3 flex-1">
+        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
+          <div className="grid gap-3 sm:grid-cols-3">
             {[
               ['Total', String(total || rows.length)],
               ['Visible', String(rows.length)],
               ['Status', status || 'All'],
             ].map(([label, value]) => (
-              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
                 <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
               </article>
             ))}
-          </div>
           <CreateModal
             title="Provision Subscription"
             description="Create subscription for an existing portal user using website-like provisioning semantics"
@@ -298,8 +297,14 @@ export default function SubscriptionsPage() {
 
 
 
-      <section className="admin-surface">
-        <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Filters</h2>
+      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><AdminIcon name="subscriptions" size={18} /></span>
+          <div>
+            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+            <p className="text-xs text-slate-500">Search by user and plan, then manage lifecycle state.</p>
+          </div>
+        </div>
         <div className="mt-4 grid gap-2 md:grid-cols-6">
           <input
             className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
@@ -390,8 +395,8 @@ export default function SubscriptionsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden admin-surface">
-        <div className="border-b border-slate-200/80 px-5 py-3">
+      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
+        <div className="border-b border-slate-200/80 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Subscription records</h2>
         </div>
 
@@ -400,7 +405,7 @@ export default function SubscriptionsPage() {
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No subscriptions found.</p>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
               <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
                 <tr>

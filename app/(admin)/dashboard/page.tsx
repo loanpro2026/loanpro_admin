@@ -17,7 +17,7 @@ type KpiPayload = {
 
 function kpiCard(title: string, value: string, hint: string) {
   return (
-    <article className="group rounded-[26px] border border-slate-200 bg-white/85 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-panel">
+    <article className="group rounded-[26px] border border-slate-200 bg-white/88 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-panel">
       <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
       <p className="mt-3 font-display text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
       <p className="mt-2 text-sm text-slate-500">{hint}</p>
@@ -70,20 +70,22 @@ export default function DashboardPage() {
   }, []);
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Command center</span>
           <h1 className="admin-title mt-4">Dashboard</h1>
-          <p className="admin-subtitle">A full-width operational overview of users, subscriptions, support load, notifications, and revenue.</p>
+          <p className="admin-subtitle">
+            A connected operational overview of users, subscriptions, support load, notifications, and revenue.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
           {[
             ['Live revenue', `INR ${glowNumber}`],
             ['Open support', String((data?.openTickets || 0) + (data?.openContactRequests || 0))],
             ['Server time', data ? new Date(data.serverTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
+            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
               <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
             </article>
@@ -105,7 +107,7 @@ export default function DashboardPage() {
           </section>
 
           <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-            <article className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+            <article className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Operational mix</p>

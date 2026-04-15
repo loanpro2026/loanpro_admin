@@ -29,7 +29,7 @@ type AnalyticsPayload = {
 
 function metricCard(title: string, value: string, subtitle: string, icon?: string) {
   return (
-    <article className="rounded-[24px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+    <article className="rounded-[24px] border border-slate-200 bg-white/88 p-5 shadow-sm">
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{title}</p>
@@ -109,15 +109,15 @@ export default function AnalyticsPage() {
   }, []);
 
   return (
-    <main className="space-y-6 p-6 sm:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr] lg:items-end">
-        <div>
+    <main className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+        <div className="max-w-3xl">
           <span className="admin-chip">Real-time insights</span>
           <h1 className="admin-title mt-4">Analytics</h1>
           <p className="admin-subtitle">Real visitor data from Google Analytics GA4 with geographic distribution and traffic patterns.</p>
         </div>
-        <div className="flex items-end justify-between gap-3">
-          <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm transition hover:border-brand-200">
+        <div className="flex items-end justify-between gap-3 lg:justify-self-end">
+          <select value={dateRange} onChange={(e) => setDateRange(e.target.value)} className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200">
             <option value="7d">Last 7 days</option>
             <option value="30d" selected>
               Last 30 days
@@ -127,7 +127,7 @@ export default function AnalyticsPage() {
           <button
             type="button"
             onClick={() => void load()}
-            className="admin-focus inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
           >
             <AdminIcon name="spark" />
             Refresh
@@ -191,7 +191,7 @@ export default function AnalyticsPage() {
           ) : null}
 
           {/* World Map & Geographic Distribution */}
-          <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Geographic distribution</p>
@@ -206,7 +206,7 @@ export default function AnalyticsPage() {
           </section>
 
           {/* Traffic Sources */}
-          <section className="rounded-[28px] border border-slate-200 bg-white/85 p-5 shadow-sm">
+          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Traffic patterns</p>
@@ -255,7 +255,7 @@ export default function AnalyticsPage() {
           </section>
 
           {/* Data Footer */}
-          <section className="rounded-[24px] border border-slate-200 bg-white/85 p-4 shadow-sm">
+          <section className="rounded-[24px] border border-slate-200 bg-white/88 p-4 shadow-sm">
             <div className="space-y-2 text-xs text-slate-600">
               <p>
                 <span className="font-semibold">GA Status:</span> {data.googleAnalytics.message}
