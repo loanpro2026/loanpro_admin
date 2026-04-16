@@ -224,6 +224,7 @@ export default function SubscriptionsPage() {
                 <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
               </article>
             ))}
+          </div>
           <CreateModal
             title="Provision Subscription"
             description="Create subscription for an existing portal user using website-like provisioning semantics"
