@@ -83,5 +83,5 @@ export async function PATCH(request: NextRequest, context: { params: Promise<{ a
 
   invalidateCacheByPrefix('team:list:');
 
-  return NextResponse.json({ success: true, data: updated });
+  return NextResponse.json({ success: true, data: { ...updated, message: 'Team member updated successfully' } });
 }

@@ -2,6 +2,8 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { ClerkProvider } from '@clerk/nextjs';
 import { Manrope, Space_Grotesk } from 'next/font/google';
+import { AppToaster } from '@/components/ui/AppToaster';
+import { ActionToastBridge } from '@/components/ui/ActionToastBridge';
 
 const manrope = Manrope({ subsets: ['latin'], variable: '--font-manrope' });
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space-grotesk' });
@@ -18,6 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={`${manrope.variable} ${spaceGrotesk.variable}`}>
       <body className="min-h-screen antialiased">
         {publishableKey ? <ClerkProvider publishableKey={publishableKey}>{children}</ClerkProvider> : children}
+        <ActionToastBridge />
+        <AppToaster />
       </body>
     </html>
   );

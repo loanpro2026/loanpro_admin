@@ -32,6 +32,17 @@ function toErrorMessage(error: unknown) {
   return 'Unknown Clerk invitation error';
 }
 
+function toErrorCode(error: unknown) {
+  if (typeof error === 'object' && error !== null) {
+    const maybeErrors = (error as { errors?: Array<{ code?: string }> }).errors;
+    if (Array.isArray(maybeErrors) && maybeErrors.length > 0) {
+      const first = maybeErrors[0];
+      if (first?.code) return String(first.code).trim().toLowerCase();
+    }
+  }
+  return '';
+}
+
 export async function POST(request: NextRequest) {
   const result = await requireApiPermission('team:invite');
   if ('response' in result) {
@@ -78,8 +89,39 @@ export async function POST(request: NextRequest) {
       throw new Error('Invitation API returned no invitation id');
     }
   } catch (error) {
+    const code = toErrorCode(error);
     const reason = toErrorMessage(error);
     console.error('[team.invite] Clerk invitation creation failed', error);
+
+    if (
+      code.includes('already_exists') ||
+      code.includes('identifier_exists') ||
+      reason.toLowerCase().includes('already invited') ||
+      reason.toLowerCase().includes('already exists')
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'An active invitation already exists for this email. Ask the user to check their inbox or resend from Clerk dashboard.',
+        },
+        { status: 409 }
+      );
+    }
+
+    if (
+      code.includes('redirect') ||
+      reason.toLowerCase().includes('redirect') ||
+      reason.toLowerCase().includes('origin')
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Invite configuration error: redirect URL is not allowed by Clerk. Add your sign-in URL to Clerk allowed redirect URLs.',
+        },
+        { status: 500 }
+      );
+    }
 
     await writeAuditLog({
       actor: result.session,
@@ -97,7 +139,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: `Invite email was not sent: ${reason}`,
+        error: `Invite email was not sent by Clerk: ${reason}`,
       },
       { status: 502 }
     );
