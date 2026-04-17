@@ -128,3 +128,38 @@ export async function countActiveSuperAdmins() {
     status: 'active',
   });
 }
+
+export async function upsertTeamMemberFromIdentity(input: {
+  clerkUserId: string;
+  email: string;
+  displayName: string;
+  role: RoleKey;
+  invitedBy: string;
+}) {
+  const db = await getAdminDb();
+  const now = new Date();
+
+  const result = await db.collection<AdminUserDocument>('admin_users').findOneAndUpdate(
+    { clerkUserId: input.clerkUserId },
+    {
+      $set: {
+        email: String(input.email || '').trim().toLowerCase(),
+        displayName: String(input.displayName || '').trim() || String(input.email || '').trim().toLowerCase(),
+        role: input.role,
+        status: 'active',
+        mfaEnforced: true,
+        invitedBy: input.invitedBy,
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        createdAt: now,
+      },
+    },
+    {
+      upsert: true,
+      returnDocument: 'after',
+    }
+  );
+
+  return result;
+}

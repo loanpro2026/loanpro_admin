@@ -8,7 +8,7 @@ import { createTeamInvite } from '@/server/repositories/team';
 import { writeAuditLog } from '@/server/services/audit-log';
 import type { RoleKey } from '@/types/rbac';
 import { invalidateCacheByPrefix } from '@/server/services/response-cache';
-import { getTeamMemberByEmail } from '@/server/repositories/team';
+import { getTeamMemberByEmail, upsertTeamMemberFromIdentity } from '@/server/repositories/team';
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -77,6 +77,50 @@ async function createClerkInvite(params: {
   });
 
   return String(created.id || '').trim();
+}
+
+async function tryGrantExistingClerkUserAccess(params: {
+  email: string;
+  role: RoleKey;
+  invitedBy: string;
+}) {
+  const client = await clerkClient();
+  const response = await client.users.getUserList({
+    emailAddress: [params.email],
+    limit: 1,
+  });
+
+  const rows = Array.isArray((response as { data?: unknown[] })?.data)
+    ? ((response as { data?: unknown[] }).data as Array<Record<string, unknown>>)
+    : [];
+  const user = rows[0];
+  if (!user) {
+    return null;
+  }
+
+  const clerkUserId = String(user.id || '').trim();
+  const firstName = String(user.firstName || '').trim();
+  const lastName = String(user.lastName || '').trim();
+  const username = String(user.username || '').trim();
+  const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || params.email;
+
+  if (!clerkUserId) {
+    return null;
+  }
+
+  const adminUser = await upsertTeamMemberFromIdentity({
+    clerkUserId,
+    email: params.email,
+    displayName,
+    role: params.role,
+    invitedBy: params.invitedBy,
+  });
+
+  return {
+    clerkUserId,
+    displayName,
+    adminUser,
+  };
 }
 
 async function resendAfterRevokingExistingInvite(email: string, role: string, redirectUrl: string) {
@@ -163,6 +207,59 @@ export async function POST(request: NextRequest) {
         inviteMessage = 'Existing invite was refreshed and invitation email was resent successfully';
       } catch (resendError) {
         const resendReason = toErrorMessage(resendError);
+        const resendCode = toErrorCode(resendError);
+
+        if (resendCode.includes('unprocessable') || resendReason.toLowerCase().includes('unprocessable')) {
+          try {
+            const granted = await tryGrantExistingClerkUserAccess({
+              email: normalizedEmail,
+              role: parsed.data.role,
+              invitedBy: result.session.clerkUserId,
+            });
+
+            if (granted) {
+              await writeAuditLog({
+                actor: result.session,
+                action: 'team.invite_existing_user_granted',
+                resource: 'team',
+                resourceId: normalizedEmail,
+                reason: parsed.data.reason,
+                after: {
+                  email: normalizedEmail,
+                  role: parsed.data.role,
+                  clerkUserId: granted.clerkUserId,
+                  mode: 'direct-access',
+                },
+              });
+
+              invalidateCacheByPrefix('team:list:');
+
+              return NextResponse.json(
+                {
+                  success: true,
+                  data: {
+                    email: normalizedEmail,
+                    role: parsed.data.role,
+                    status: 'active',
+                    message:
+                      'This email already has a Clerk account. Admin access has been granted directly; ask the user to sign in now.',
+                  },
+                },
+                { status: 201 }
+              );
+            }
+          } catch (grantError) {
+            const grantReason = toErrorMessage(grantError);
+            return NextResponse.json(
+              {
+                success: false,
+                error: `Automatic resend failed and direct access fallback failed: ${grantReason}`,
+              },
+              { status: 502 }
+            );
+          }
+        }
+
         return NextResponse.json(
           {
             success: false,
