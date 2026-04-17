@@ -2,7 +2,7 @@ import { auth, currentUser } from '@clerk/nextjs/server';
 import { getAdminDb } from '@/lib/db/mongo';
 import { getEnv } from '@/config/env';
 import { ROLE_PERMISSIONS } from '@/lib/rbac/permissions';
-import type { AdminUserDocument } from '@/types/admin';
+import type { AdminInviteDocument, AdminUserDocument } from '@/types/admin';
 import type { Permission, RoleKey } from '@/types/rbac';
 
 export type AdminSession = {
@@ -77,6 +77,53 @@ export async function getAdminSession(): Promise<AdminSession | null> {
   if (!adminUser) {
     await maybeBootstrapAdmin(clerkUserId, email, displayName);
     adminUser = await db.collection<AdminUserDocument>('admin_users').findOne({ clerkUserId });
+  }
+
+  if (!adminUser && email) {
+    const now = new Date();
+    const acceptedInvite = await db.collection<AdminInviteDocument>('admin_invites').findOneAndUpdate(
+      {
+        email,
+        status: 'pending',
+        expiresAt: { $gt: now },
+      },
+      {
+        $set: {
+          status: 'accepted',
+          updatedAt: now,
+        },
+      },
+      {
+        sort: { updatedAt: -1 },
+        returnDocument: 'before',
+      }
+    );
+
+    if (acceptedInvite?.role) {
+      await db.collection<AdminUserDocument>('admin_users').findOneAndUpdate(
+        { clerkUserId },
+        {
+          $set: {
+            email,
+            displayName,
+            role: acceptedInvite.role,
+            status: 'active',
+            mfaEnforced: true,
+            invitedBy: acceptedInvite.invitedBy,
+            updatedAt: now,
+          },
+          $setOnInsert: {
+            createdAt: now,
+          },
+        },
+        {
+          upsert: true,
+          returnDocument: 'after',
+        }
+      );
+
+      adminUser = await db.collection<AdminUserDocument>('admin_users').findOne({ clerkUserId });
+    }
   }
 
   if (!adminUser || adminUser.status !== 'active') {
