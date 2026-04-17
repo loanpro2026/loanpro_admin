@@ -260,20 +260,20 @@ export default function SupportTicketsPage() {
           <p className="mt-2 text-base text-slate-600">Assign, reply, and close tickets while reviewing conversation history in chat form.</p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="admin-kpi-grid lg:justify-self-end">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.total}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Open</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.open}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">In progress</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.inProgress}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Resolved</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.resolved}</p>
           </article>

@@ -54,9 +54,11 @@ export default function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [search, setSearch] = useState('');
   const [status, setStatus] = useState<'all' | 'active' | 'banned'>('all');
   const [updatingUserId, setUpdatingUserId] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState('');
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
@@ -67,6 +69,7 @@ export default function UsersPage() {
   const load = async () => {
     setLoading(true);
     setError('');
+    setSuccess('');
 
     try {
       const params = new URLSearchParams({
@@ -86,7 +89,9 @@ export default function UsersPage() {
         throw new Error(payload?.error || 'Failed to fetch users');
       }
 
-      setRows(payload.data || []);
+      const nextRows: UserRow[] = payload.data || [];
+      setRows(nextRows);
+      setSelectedUserId((prev) => (prev && nextRows.some((row) => row.userId === prev) ? prev : ''));
       setTotal(Number(payload?.meta?.total || 0));
       setHasMore(Boolean(payload?.meta?.hasMore));
     } catch (loadError) {
@@ -149,6 +154,7 @@ export default function UsersPage() {
 
     setUpdatingUserId(row.userId);
     setError('');
+    setSuccess('');
 
     try {
       const response = await fetch(`/api/users/${encodeURIComponent(row.userId)}`, {
@@ -162,6 +168,7 @@ export default function UsersPage() {
         throw new Error(payload?.error || 'Failed to edit user');
       }
 
+      setSuccess(`Updated user ${row.userId}.`);
       await load();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'Failed to edit user');
@@ -183,6 +190,7 @@ export default function UsersPage() {
 
     setUpdatingUserId(row.userId);
     setError('');
+    setSuccess('');
 
     try {
       const response = await fetch(`/api/users/${encodeURIComponent(row.userId)}`, {
@@ -196,6 +204,7 @@ export default function UsersPage() {
         throw new Error(payload?.error || 'Failed to delete user');
       }
 
+      setSuccess(`Deleted user ${row.userId}.`);
       await load();
     } catch (deleteError) {
       setError(deleteError instanceof Error ? deleteError.message : 'Failed to delete user');
@@ -207,6 +216,7 @@ export default function UsersPage() {
   const toggleSuspension = async (row: UserRow) => {
     setUpdatingUserId(row.userId);
     setError('');
+    setSuccess('');
 
     try {
       const reason = (window.prompt('Reason for suspension status change:', '') || '').trim();
@@ -226,6 +236,7 @@ export default function UsersPage() {
         throw new Error(payload?.error || 'Failed to update user');
       }
 
+      setSuccess(`${row.banned ? 'Restored' : 'Suspended'} user ${row.userId}.`);
       await load();
     } catch (updateError) {
       setError(updateError instanceof Error ? updateError.message : 'Failed to update user');
@@ -236,10 +247,11 @@ export default function UsersPage() {
 
   const activeCount = useMemo(() => rows.filter((row) => !row.banned).length, [rows]);
   const bannedCount = useMemo(() => rows.filter((row) => row.banned).length, [rows]);
+  const selectedUser = useMemo(() => rows.find((row) => row.userId === selectedUserId) || null, [rows, selectedUserId]);
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+      <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] xl:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Customer operations</span>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Users</h1>
@@ -248,14 +260,14 @@ export default function UsersPage() {
           </p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+        <div className="admin-kpi-grid xl:justify-self-end">
           {[
             ['Total', String(total || rows.length)],
             ['Visible', String(rows.length)],
             ['Active', String(activeCount)],
             ['Banned', String(bannedCount)],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article key={label} className="admin-kpi-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
             </article>
@@ -357,6 +369,47 @@ export default function UsersPage() {
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
+      {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Row actions</h2>
+            <p className="text-sm text-slate-500">
+              {selectedUser
+                ? `Selected: ${userDisplayName(selectedUser)} (${selectedUser.userId})`
+                : 'Select one user row from the table to enable actions.'}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              disabled={!selectedUser || updatingUserId === selectedUser.userId}
+              onClick={() => selectedUser && void editUser(selectedUser)}
+              className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              disabled={!selectedUser || updatingUserId === selectedUser.userId}
+              onClick={() => selectedUser && void toggleSuspension(selectedUser)}
+              className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {selectedUser?.banned ? 'Restore' : 'Suspend'}
+            </button>
+            <button
+              type="button"
+              disabled={!selectedUser || updatingUserId === selectedUser.userId}
+              onClick={() => selectedUser && void deleteUser(selectedUser)}
+              className="admin-focus rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
@@ -378,14 +431,18 @@ export default function UsersPage() {
                   <th className="px-5 py-3">Subscription</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Created</th>
-                  <th className="px-5 py-3">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => {
                   const subStatus = String(row.subscription?.status || '-');
+                  const selected = selectedUserId === row.userId;
                   return (
-                    <tr key={row.userId} className="border-t border-slate-200 transition hover:bg-slate-50">
+                    <tr
+                      key={row.userId}
+                      onClick={() => setSelectedUserId(row.userId)}
+                      className={`cursor-pointer border-t border-slate-200 transition hover:bg-slate-50 ${selected ? 'bg-slate-50' : ''}`}
+                    >
                       <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
@@ -410,34 +467,6 @@ export default function UsersPage() {
                         </span>
                       </td>
                       <td className="px-5 py-4 text-slate-700">{formatDate(row.createdAt)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex flex-wrap gap-2">
-                          <button
-                            type="button"
-                            disabled={updatingUserId === row.userId}
-                            onClick={() => void editUser(row)}
-                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            type="button"
-                            disabled={updatingUserId === row.userId}
-                            onClick={() => void toggleSuspension(row)}
-                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            {updatingUserId === row.userId ? 'Saving...' : row.banned ? 'Restore' : 'Suspend'}
-                          </button>
-                          <button
-                            type="button"
-                            disabled={updatingUserId === row.userId}
-                            onClick={() => void deleteUser(row)}
-                            className="admin-focus rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      </td>
                     </tr>
                   );
                 })}

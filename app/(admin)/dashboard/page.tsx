@@ -149,7 +149,7 @@ export default function DashboardPage() {
     const max = Math.max(...source.map((item) => item.value), 1);
     return source.map((item) => ({
       ...item,
-      height: Math.max(12, Math.round((item.value / max) * 100)),
+      width: Math.max(10, Math.round((item.value / max) * 100)),
     }));
   }, [payload]);
 
@@ -171,16 +171,16 @@ export default function DashboardPage() {
         </div>
 
         {payload ? (
-          <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="admin-kpi-grid lg:justify-self-end">
+            <article className="admin-kpi-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Monthly revenue</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{formatCurrency(payload.kpis.monthlyRevenue)}</p>
             </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="admin-kpi-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Support backlog</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{formatNumber(supportBacklog)}</p>
             </article>
-            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article className="admin-kpi-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Server time</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{new Date(payload.kpis.serverTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
             </article>
@@ -351,12 +351,16 @@ export default function DashboardPage() {
                 <AdminIcon name="analytics" className="text-slate-500" />
               </div>
 
-              <div className="grid h-40 grid-cols-3 items-end gap-3">
+              <div className="space-y-3">
                 {engagementBars.map((entry) => (
-                  <div key={entry.label} className="flex flex-col items-center gap-2">
-                    <div className="text-xs font-medium text-slate-500">{formatNumber(entry.value)}</div>
-                    <div className="w-full rounded-t-lg bg-gradient-to-t from-sky-500 to-blue-400" style={{ height: `${entry.height}%` }} />
-                    <div className="text-center text-xs font-semibold text-slate-600">{entry.label}</div>
+                  <div key={entry.label} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-slate-600">{entry.label}</span>
+                      <span className="text-slate-500">{formatNumber(entry.value)}</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                      <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-500" style={{ width: `${entry.width}%` }} />
+                    </div>
                   </div>
                 ))}
               </div>

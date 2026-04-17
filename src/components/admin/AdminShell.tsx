@@ -181,7 +181,7 @@ export function AdminShell({ children }: AdminShellProps) {
                       }
                     }}
                   />
-                  <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">Ctrl K</span>
+                  <span className="shrink-0 whitespace-nowrap rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-semibold text-slate-500">Ctrl + K</span>
                 </>
               )}
             </label>

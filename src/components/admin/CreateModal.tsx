@@ -49,7 +49,7 @@ export function CreateModal({
         type="button"
         disabled={openDisabled}
         onClick={() => setOpen(true)}
-        className="admin-focus inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+        className="admin-focus inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
         title={description}
       >
         <AdminIcon name={icon} size={16} />
@@ -88,7 +88,7 @@ export function CreateModal({
                   <button
                     type="button"
                     onClick={() => setOpen(false)}
-                    className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                    className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
                   >
                     Cancel
                   </button>
@@ -96,7 +96,7 @@ export function CreateModal({
                     type="button"
                     disabled={isLoading || disabled}
                     onClick={() => void handleSubmit()}
-                    className="admin-focus rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="admin-focus rounded-xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isLoading ? 'Creating...' : 'Create'}
                   </button>

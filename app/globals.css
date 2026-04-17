@@ -61,6 +61,15 @@
     @apply rounded-xl border px-4 py-3 text-sm;
   }
 
+  .admin-kpi-grid {
+    @apply grid w-full grid-cols-2 gap-3 sm:grid-cols-4;
+  }
+
+  .admin-kpi-card {
+    @apply rounded-2xl border border-slate-200 bg-white p-4 shadow-sm;
+    min-height: 6.25rem;
+  }
+
   .admin-table {
     border-collapse: separate;
     border-spacing: 0;

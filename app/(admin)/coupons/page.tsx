@@ -285,20 +285,20 @@ export default function CouponsPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+      <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] xl:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Discount control</span>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Coupons</h1>
           <p className="mt-2 text-base text-slate-600">Create, tune, and retire promotional discounts with full audit reasons.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+        <div className="admin-kpi-grid xl:justify-self-end">
           {[
             ['Total', String(total || rows.length)],
             ['Visible', String(rows.length)],
             ['Active', String(activeCount)],
             ['Has more', hasMore ? 'Yes' : 'No'],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <article key={label} className="admin-kpi-card">
               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
               <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
             </article>

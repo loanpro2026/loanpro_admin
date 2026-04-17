@@ -267,26 +267,26 @@ export default function RolesPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+      <header className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(420px,560px)] xl:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Authorization control</span>
           <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Roles and Permissions</h1>
           <p className="mt-2 text-base text-slate-600">Define role templates, control permission boundaries, and protect privileged operations.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="admin-kpi-grid xl:justify-self-end">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visible</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.length}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{total}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">System</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.filter((role) => role.isSystemRole).length}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Custom</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.filter((role) => !role.isSystemRole).length}</p>
           </article>

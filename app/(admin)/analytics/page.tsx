@@ -39,6 +39,33 @@ function formatCurrency(value: number) {
   return `INR ${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
+function countryToCoords(country: string) {
+  const key = String(country || '').trim().toLowerCase();
+  const table: Record<string, { x: number; y: number }> = {
+    india: { x: 69, y: 52 },
+    'united states': { x: 20, y: 44 },
+    usa: { x: 20, y: 44 },
+    canada: { x: 18, y: 31 },
+    'united kingdom': { x: 47, y: 37 },
+    uk: { x: 47, y: 37 },
+    germany: { x: 51, y: 40 },
+    france: { x: 49, y: 42 },
+    spain: { x: 47, y: 47 },
+    italy: { x: 53, y: 45 },
+    nigeria: { x: 50, y: 62 },
+    'south africa': { x: 55, y: 79 },
+    uae: { x: 62, y: 55 },
+    australia: { x: 84, y: 77 },
+    singapore: { x: 74, y: 66 },
+    japan: { x: 84, y: 46 },
+    brazil: { x: 33, y: 71 },
+    mexico: { x: 18, y: 54 },
+    indonesia: { x: 76, y: 70 },
+  };
+
+  return table[key] || { x: 50, y: 50 };
+}
+
 function metricCard(title: string, value: string, subtitle: string, icon: 'users' | 'chart' | 'spark' | 'status') {
   return (
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -125,6 +152,19 @@ export default function AnalyticsPage() {
 
   const channelTotal = useMemo(() => {
     return (data?.googleAnalytics.channelBreakdown || []).reduce((sum, item) => sum + Number(item.sessions || 0), 0);
+  }, [data]);
+
+  const geoPoints = useMemo(() => {
+    const rows = data?.googleAnalytics.countryBreakdown || [];
+    const maxUsers = Math.max(...rows.map((item) => Number(item.activeUsers || 0)), 1);
+    return rows.slice(0, 10).map((item) => {
+      const coords = countryToCoords(item.country);
+      return {
+        ...item,
+        ...coords,
+        radius: Math.max(3, Math.round((Number(item.activeUsers || 0) / maxUsers) * 9)),
+      };
+    });
   }, [data]);
 
   return (
@@ -214,12 +254,35 @@ export default function AnalyticsPage() {
               <div className="mb-4 flex items-center justify-between">
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Geography</p>
-                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Top countries by active users</h2>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Global activity map</h2>
                 </div>
                 <AdminIcon name="chart" className="text-slate-500" />
               </div>
-              <div className="space-y-3">
-                {(data.googleAnalytics.countryBreakdown || []).map((country) => (
+
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <svg viewBox="0 0 100 56" className="h-52 w-full">
+                  <rect x="0" y="0" width="100" height="56" rx="4" fill="#f8fafc" />
+                  {[20, 40, 60, 80].map((x) => (
+                    <line key={`v-${x}`} x1={x} y1="0" x2={x} y2="56" stroke="#e2e8f0" strokeDasharray="2 2" />
+                  ))}
+                  {[14, 28, 42].map((y) => (
+                    <line key={`h-${y}`} x1="0" y1={y} x2="100" y2={y} stroke="#e2e8f0" strokeDasharray="2 2" />
+                  ))}
+
+                  <path d="M8 19 L20 16 L28 20 L35 18 L43 22 L54 18 L62 20 L70 17 L82 22 L92 20" stroke="#cbd5e1" strokeWidth="1.3" fill="none" />
+                  <path d="M12 32 L20 35 L30 34 L38 37 L48 35 L56 38 L66 36 L78 39 L90 37" stroke="#cbd5e1" strokeWidth="1.3" fill="none" />
+
+                  {geoPoints.map((point) => (
+                    <g key={point.country}>
+                      <circle cx={point.x} cy={point.y} r={point.radius + 2} fill="rgba(14,165,233,0.18)" />
+                      <circle cx={point.x} cy={point.y} r={point.radius} fill="#0ea5e9" />
+                    </g>
+                  ))}
+                </svg>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {(data.googleAnalytics.countryBreakdown || []).slice(0, 5).map((country) => (
                   <div key={country.country} className="space-y-1.5">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-medium text-slate-700">{country.country}</span>

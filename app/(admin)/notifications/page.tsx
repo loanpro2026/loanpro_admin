@@ -214,20 +214,20 @@ export default function NotificationsPage() {
             Track admin-side mutations in real time, isolate critical resources, and maintain response awareness.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="admin-kpi-grid lg:justify-self-end">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visible</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{rows.length}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unread</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{unreadTotal}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{total}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Groups</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{groupedRows.length}</p>
           </article>

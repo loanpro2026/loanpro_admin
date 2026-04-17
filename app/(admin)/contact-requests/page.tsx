@@ -215,20 +215,20 @@ export default function ContactRequestsPage() {
           <p className="mt-2 text-base text-slate-600">Review inbound submissions, assign ownership, and move leads through contact workflow states.</p>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="admin-kpi-grid lg:justify-self-end">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.total}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">New</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.new}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Follow-up</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.followUp}</p>
           </article>
-          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <article className="admin-kpi-card">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">High Priority</p>
             <p className="mt-2 text-2xl font-semibold text-slate-950">{summary.highPriority}</p>
           </article>
