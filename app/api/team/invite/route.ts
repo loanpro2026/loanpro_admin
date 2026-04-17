@@ -43,6 +43,66 @@ function toErrorCode(error: unknown) {
   return '';
 }
 
+function extractInvitationId(record: unknown) {
+  if (typeof record !== 'object' || record === null) return '';
+  const id = (record as { id?: unknown }).id;
+  return String(id || '').trim();
+}
+
+function extractInvitationRows(response: unknown) {
+  if (typeof response !== 'object' || response === null) return [] as unknown[];
+
+  const direct = (response as { data?: unknown }).data;
+  if (Array.isArray(direct)) return direct;
+
+  if (Array.isArray(response)) return response;
+  return [] as unknown[];
+}
+
+async function createClerkInvite(params: {
+  email: string;
+  role: string;
+  redirectUrl: string;
+  ignoreExisting: boolean;
+}) {
+  const client = await clerkClient();
+  const created = await client.invitations.createInvitation({
+    emailAddress: params.email,
+    redirectUrl: params.redirectUrl,
+    publicMetadata: {
+      adminRole: params.role,
+    },
+    notify: true,
+    ignoreExisting: params.ignoreExisting,
+  });
+
+  return String(created.id || '').trim();
+}
+
+async function resendAfterRevokingExistingInvite(email: string, role: string, redirectUrl: string) {
+  const client = await clerkClient();
+  const listResponse = await client.invitations.getInvitationList({
+    query: email,
+    status: 'pending',
+    limit: 20,
+  });
+
+  const rows = extractInvitationRows(listResponse);
+  const target = rows.find((item) => {
+    if (typeof item !== 'object' || item === null) return false;
+    const itemEmail = String((item as { emailAddress?: unknown }).emailAddress || '').trim().toLowerCase();
+    return itemEmail === email;
+  });
+
+  const invitationId = extractInvitationId(target);
+  if (!invitationId) {
+    throw new Error('Existing invitation was detected but could not be resolved for resend');
+  }
+
+  await client.invitations.revokeInvitation(invitationId);
+  return createClerkInvite({ email, role, redirectUrl, ignoreExisting: false });
+}
+
 export async function POST(request: NextRequest) {
   const result = await requireApiPermission('team:invite');
   if ('response' in result) {
@@ -73,18 +133,14 @@ export async function POST(request: NextRequest) {
   const redirectUrl = env.ADMIN_INVITE_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/sign-in`;
 
   let clerkInvitationId = '';
+  let inviteMessage = 'Invitation email sent successfully';
   try {
-    const client = await clerkClient();
-    const created = await client.invitations.createInvitation({
-      emailAddress: normalizedEmail,
+    clerkInvitationId = await createClerkInvite({
+      email: normalizedEmail,
+      role: parsed.data.role,
       redirectUrl,
-      publicMetadata: {
-        adminRole: parsed.data.role,
-      },
       ignoreExisting: false,
     });
-
-    clerkInvitationId = String(created.id || '').trim();
     if (!clerkInvitationId) {
       throw new Error('Invitation API returned no invitation id');
     }
@@ -99,16 +155,24 @@ export async function POST(request: NextRequest) {
       reason.toLowerCase().includes('already invited') ||
       reason.toLowerCase().includes('already exists')
     ) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'An active invitation already exists for this email. Ask the user to check their inbox or resend from Clerk dashboard.',
-        },
-        { status: 409 }
-      );
+      try {
+        clerkInvitationId = await resendAfterRevokingExistingInvite(normalizedEmail, parsed.data.role, redirectUrl);
+        if (!clerkInvitationId) {
+          throw new Error('Resend flow did not return a valid invitation id');
+        }
+        inviteMessage = 'Existing invite was refreshed and invitation email was resent successfully';
+      } catch (resendError) {
+        const resendReason = toErrorMessage(resendError);
+        return NextResponse.json(
+          {
+            success: false,
+            error: `An invitation already exists for this email, and automatic resend failed: ${resendReason}`,
+          },
+          { status: 502 }
+        );
+      }
     }
-
-    if (
+    else if (
       code.includes('redirect') ||
       reason.toLowerCase().includes('redirect') ||
       reason.toLowerCase().includes('origin')
@@ -123,26 +187,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    await writeAuditLog({
-      actor: result.session,
-      action: 'team.invite_failed',
-      resource: 'team',
-      resourceId: normalizedEmail,
-      reason: parsed.data.reason,
-      after: {
-        email: normalizedEmail,
-        role: parsed.data.role,
-        deliveryError: reason,
-      },
-    });
+    else {
+      await writeAuditLog({
+        actor: result.session,
+        action: 'team.invite_failed',
+        resource: 'team',
+        resourceId: normalizedEmail,
+        reason: parsed.data.reason,
+        after: {
+          email: normalizedEmail,
+          role: parsed.data.role,
+          deliveryError: reason,
+        },
+      });
 
-    return NextResponse.json(
-      {
-        success: false,
-        error: `Invite email was not sent by Clerk: ${reason}`,
-      },
-      { status: 502 }
-    );
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invite email was not sent by Clerk: ${reason}`,
+        },
+        { status: 502 }
+      );
+    }
   }
 
   const invite = await createTeamInvite({
@@ -177,7 +243,7 @@ export async function POST(request: NextRequest) {
         status: invite.status,
         expiresAt: invite.expiresAt,
         clerkInvitationId,
-        message: 'Invitation email sent successfully',
+        message: inviteMessage,
       },
     },
     { status: 201 }
