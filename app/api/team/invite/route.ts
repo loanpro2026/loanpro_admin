@@ -8,12 +8,29 @@ import { createTeamInvite } from '@/server/repositories/team';
 import { writeAuditLog } from '@/server/services/audit-log';
 import type { RoleKey } from '@/types/rbac';
 import { invalidateCacheByPrefix } from '@/server/services/response-cache';
+import { getTeamMemberByEmail } from '@/server/repositories/team';
 
 const inviteSchema = z.object({
   email: z.string().email(),
   role: z.enum(['super_admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']),
   reason: z.string().min(3).max(240),
 });
+
+function toErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  if (typeof error === 'object' && error !== null) {
+    const maybeErrors = (error as { errors?: Array<{ message?: string }> }).errors;
+    if (Array.isArray(maybeErrors) && maybeErrors.length > 0) {
+      const first = maybeErrors[0];
+      if (first?.message) return first.message;
+    }
+  }
+
+  return 'Unknown Clerk invitation error';
+}
 
 export async function POST(request: NextRequest) {
   const result = await requireApiPermission('team:invite');
@@ -32,31 +49,65 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: false, error: parsed.error.message }, { status: 400 });
   }
 
-  const invite = await createTeamInvite({
-    email: parsed.data.email,
-    role: parsed.data.role as RoleKey,
-    invitedBy: result.session.clerkUserId,
-  });
+  const normalizedEmail = String(parsed.data.email || '').trim().toLowerCase();
+  const existingMember = await getTeamMemberByEmail(normalizedEmail);
+  if (existingMember) {
+    return NextResponse.json(
+      { success: false, error: 'This user is already part of the admin team. Update role/status from Team Management.' },
+      { status: 409 }
+    );
+  }
 
-  let clerkInvitationId: string | null = null;
+  const env = getEnv();
+  const redirectUrl = env.ADMIN_INVITE_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/sign-in`;
+
+  let clerkInvitationId = '';
   try {
-    const env = getEnv();
-    const redirectUrl = env.ADMIN_INVITE_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/sign-in`;
     const client = await clerkClient();
     const created = await client.invitations.createInvitation({
-      emailAddress: parsed.data.email,
+      emailAddress: normalizedEmail,
       redirectUrl,
       publicMetadata: {
         adminRole: parsed.data.role,
       },
-      ignoreExisting: true,
+      ignoreExisting: false,
     });
 
-    clerkInvitationId = String(created.id || '');
+    clerkInvitationId = String(created.id || '').trim();
+    if (!clerkInvitationId) {
+      throw new Error('Invitation API returned no invitation id');
+    }
   } catch (error) {
-    // Keep internal invite row even if Clerk invite call fails so operation can be retried.
+    const reason = toErrorMessage(error);
     console.error('[team.invite] Clerk invitation creation failed', error);
+
+    await writeAuditLog({
+      actor: result.session,
+      action: 'team.invite_failed',
+      resource: 'team',
+      resourceId: normalizedEmail,
+      reason: parsed.data.reason,
+      after: {
+        email: normalizedEmail,
+        role: parsed.data.role,
+        deliveryError: reason,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Invite email was not sent: ${reason}`,
+      },
+      { status: 502 }
+    );
   }
+
+  const invite = await createTeamInvite({
+    email: normalizedEmail,
+    role: parsed.data.role as RoleKey,
+    invitedBy: result.session.clerkUserId,
+  });
 
   await writeAuditLog({
     actor: result.session,
@@ -84,6 +135,7 @@ export async function POST(request: NextRequest) {
         status: invite.status,
         expiresAt: invite.expiresAt,
         clerkInvitationId,
+        message: 'Invitation email sent successfully',
       },
     },
     { status: 201 }

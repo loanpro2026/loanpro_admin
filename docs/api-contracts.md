@@ -13,6 +13,16 @@
 - `PATCH /api/roles/:id`: update role permissions.
 - `DELETE /api/roles/:id`: delete role.
 
+### Team Invite Delivery Contract (`POST /api/team/invite`)
+- Request body: `{ email, role, reason }`.
+- Success response: `201` with `{ success: true, data: { email, role, status, expiresAt, clerkInvitationId } }`.
+- Delivery failure response: `502` with `{ success: false, error }` when Clerk invitation email could not be created.
+- Existing member response: `409` with `{ success: false, error }` when email already belongs to an admin team member.
+- Permission required: `team:invite`.
+- Audit trail:
+	- `team.invite` on successful delivery.
+	- `team.invite_failed` when delivery fails upstream.
+
 ## Users and Subscription Ops
 - `GET /api/users`: user search and filters.
 - `GET /api/users/:id`: profile with timeline.

@@ -113,6 +113,14 @@ export async function getTeamMemberById(adminUserId: string) {
   return db.collection<AdminUserDocument>('admin_users').findOne(filter);
 }
 
+export async function getTeamMemberByEmail(email: string) {
+  const db = await getAdminDb();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  return db.collection<AdminUserDocument>('admin_users').findOne({ email: normalizedEmail });
+}
+
 export async function countActiveSuperAdmins() {
   const db = await getAdminDb();
   return db.collection<AdminUserDocument>('admin_users').countDocuments({

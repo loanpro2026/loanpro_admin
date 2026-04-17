@@ -8,7 +8,7 @@ interface CreateModalProps {
   title: string;
   description: string;
   buttonText?: string;
-  onSubmit: () => Promise<void>;
+  onSubmit: () => Promise<boolean | void>;
   isLoading: boolean;
   children: ReactNode;
   openDisabled?: boolean;
@@ -36,7 +36,10 @@ export function CreateModal({
 
   const handleSubmit = async () => {
     try {
-      await onSubmit();
+      const closeModal = await onSubmit();
+      if (closeModal === false) {
+        return;
+      }
       setOpen(false);
     } catch (error) {
       // Error handling is done in parent component

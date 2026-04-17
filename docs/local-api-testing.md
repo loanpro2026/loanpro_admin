@@ -54,6 +54,21 @@ Invoke-RestMethod -Method GET -Uri "http://localhost:3000/api/integrations/usage
 3. Call `GET /api/auth/me` and verify role is `super_admin`.
 4. Open Team page and invite one member with required reason.
 
+## 6) Team invite delivery requirements
+- Required for actual email delivery:
+	- `CLERK_SECRET_KEY`
+	- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
+	- Optional but recommended: `ADMIN_INVITE_REDIRECT_URL` (must match allowed redirect URLs in Clerk dashboard).
+- Expected behavior:
+	- Invite returns `201` only when Clerk invitation email creation succeeds.
+	- Invite returns `502` with an explicit message when upstream Clerk delivery fails.
+
+## 7) Team invite troubleshooting checklist
+1. Verify `CLERK_SECRET_KEY` is present in runtime env.
+2. Verify redirect URL allowlist in Clerk includes the configured sign-in redirect.
+3. Check API response body from `POST /api/team/invite`; failure is now explicit and should not be silent.
+4. Check audit logs for `team.invite_failed` entries.
+
 ## Security note
 `ADMIN_DEV_BYPASS_KEY` is development-only and disabled automatically when `NODE_ENV=production`.
 Never configure this key in production environments.

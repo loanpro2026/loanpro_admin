@@ -23,6 +23,7 @@ export default function TeamPage() {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<RoleKey>('viewer');
@@ -206,10 +207,12 @@ export default function TeamPage() {
   const sendInvite = async () => {
     setInviting(true);
     setError('');
+    setSuccess('');
 
     try {
       if (!inviteReason.trim()) {
-        throw new Error('A reason is required for team invites');
+        setError('A reason is required for team invites');
+        return false;
       }
 
       const response = await fetch('/api/team/invite', {
@@ -230,9 +233,12 @@ export default function TeamPage() {
       setInviteEmail('');
       setInviteRole('viewer');
       setInviteReason('');
+      setSuccess(`Invite sent to ${payload?.data?.email || 'team member'} successfully.`);
       await loadTeam();
+      return true;
     } catch (inviteError) {
       setError(inviteError instanceof Error ? inviteError.message : 'Failed to send invite');
+      return false;
     } finally {
       setInviting(false);
     }
@@ -452,6 +458,7 @@ export default function TeamPage() {
       </section>
 
       {error ? <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-sm">{error}</p> : null}
+      {success ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">{success}</p> : null}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">

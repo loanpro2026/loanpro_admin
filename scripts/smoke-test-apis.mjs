@@ -1,6 +1,7 @@
 const baseUrl = (process.env.ADMIN_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '');
 const bypassKey = String(process.env.ADMIN_DEV_BYPASS_KEY || '').trim();
 const runMutations = String(process.env.ADMIN_RUN_MUTATION_TESTS || '0').trim() === '1';
+const inviteEmail = String(process.env.ADMIN_SMOKE_INVITE_EMAIL || '').trim().toLowerCase();
 
 if (!bypassKey) {
   console.error('Missing ADMIN_DEV_BYPASS_KEY in environment.');
@@ -75,6 +76,17 @@ async function main() {
         reason: 'Local mutation smoke test',
       });
       printResult(patchRole);
+    }
+
+    if (inviteEmail) {
+      const inviteResult = await request('POST', '/api/team/invite', {
+        email: inviteEmail,
+        role: 'viewer',
+        reason: 'Local mutation smoke test invite',
+      });
+      printResult(inviteResult);
+    } else {
+      console.log('SKIP team invite smoke check (set ADMIN_SMOKE_INVITE_EMAIL to enable)');
     }
   }
 
