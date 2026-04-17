@@ -27,16 +27,22 @@ export default function CouponsPage() {
   const [rows, setRows] = useState<CouponRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [statusInput, setStatusInput] = useState('all');
   const [submitting, setSubmitting] = useState(false);
   const [updatingId, setUpdatingId] = useState('');
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [sortBy, setSortBy] = useState<'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount'>('createdAt');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sortByInput, setSortByInput] = useState<'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount'>('createdAt');
+  const [sortDirInput, setSortDirInput] = useState<'asc' | 'desc'>('desc');
+  const [appliedQuery, setAppliedQuery] = useState({
+    search: '',
+    status: 'all',
+    sortBy: 'createdAt' as 'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount',
+    sortDir: 'desc' as 'asc' | 'desc',
+  });
 
   const [form, setForm] = useState({
     code: '',
@@ -61,11 +67,11 @@ export default function CouponsPage() {
       const params = new URLSearchParams({
         limit: String(limit),
         skip: String(skip),
-        sortBy,
-        sortDir,
+        sortBy: appliedQuery.sortBy,
+        sortDir: appliedQuery.sortDir,
       });
-      if (search.trim()) params.set('search', search.trim());
-      if (status !== 'all') params.set('status', status);
+      if (appliedQuery.search.trim()) params.set('search', appliedQuery.search.trim());
+      if (appliedQuery.status !== 'all') params.set('status', appliedQuery.status);
 
       const response = await fetch(`/api/coupons?${params.toString()}`);
       const payload = await response.json();
@@ -88,27 +94,52 @@ export default function CouponsPage() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
-        search?: string;
-        status?: string;
-        sortBy?: 'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount';
-        sortDir?: 'asc' | 'desc';
+        searchInput?: string;
+        statusInput?: string;
+        sortByInput?: 'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount';
+        sortDirInput?: 'asc' | 'desc';
         limit?: number;
       };
-      if (typeof parsed.search === 'string') setSearch(parsed.search);
-      if (parsed.status === 'all' || parsed.status === 'active' || parsed.status === 'inactive' || parsed.status === 'expired') {
-        setStatus(parsed.status);
+      if (typeof parsed.searchInput === 'string') setSearchInput(parsed.searchInput);
+      if (
+        parsed.statusInput === 'all' ||
+        parsed.statusInput === 'active' ||
+        parsed.statusInput === 'inactive' ||
+        parsed.statusInput === 'expired'
+      ) {
+        setStatusInput(parsed.statusInput);
       }
       if (
-        parsed.sortBy === 'createdAt' ||
-        parsed.sortBy === 'updatedAt' ||
-        parsed.sortBy === 'discountValue' ||
-        parsed.sortBy === 'code' ||
-        parsed.sortBy === 'usedCount'
+        parsed.sortByInput === 'createdAt' ||
+        parsed.sortByInput === 'updatedAt' ||
+        parsed.sortByInput === 'discountValue' ||
+        parsed.sortByInput === 'code' ||
+        parsed.sortByInput === 'usedCount'
       ) {
-        setSortBy(parsed.sortBy);
+        setSortByInput(parsed.sortByInput);
       }
-      if (parsed.sortDir === 'asc' || parsed.sortDir === 'desc') setSortDir(parsed.sortDir);
+      if (parsed.sortDirInput === 'asc' || parsed.sortDirInput === 'desc') setSortDirInput(parsed.sortDirInput);
       if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
+
+      setAppliedQuery({
+        search: typeof parsed.searchInput === 'string' ? parsed.searchInput : '',
+        status:
+          parsed.statusInput === 'all' ||
+          parsed.statusInput === 'active' ||
+          parsed.statusInput === 'inactive' ||
+          parsed.statusInput === 'expired'
+            ? parsed.statusInput
+            : 'all',
+        sortBy:
+          parsed.sortByInput === 'createdAt' ||
+          parsed.sortByInput === 'updatedAt' ||
+          parsed.sortByInput === 'discountValue' ||
+          parsed.sortByInput === 'code' ||
+          parsed.sortByInput === 'usedCount'
+            ? parsed.sortByInput
+            : 'createdAt',
+        sortDir: parsed.sortDirInput === 'asc' || parsed.sortDirInput === 'desc' ? parsed.sortDirInput : 'desc',
+      });
     } catch {
       // Ignore invalid saved preferences
     }
@@ -118,16 +149,26 @@ export default function CouponsPage() {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ search, status, sortBy, sortDir, limit })
+        JSON.stringify({ searchInput, statusInput, sortByInput, sortDirInput, limit })
       );
     } catch {
       // Ignore storage errors
     }
-  }, [search, status, sortBy, sortDir, limit]);
+  }, [searchInput, statusInput, sortByInput, sortDirInput, limit]);
 
   useEffect(() => {
     void load();
-  }, [skip, sortBy, sortDir, limit]);
+  }, [skip, limit, appliedQuery.search, appliedQuery.status, appliedQuery.sortBy, appliedQuery.sortDir]);
+
+  const applyFilters = () => {
+    setSkip(0);
+    setAppliedQuery({
+      search: searchInput.trim(),
+      status: statusInput,
+      sortBy: sortByInput,
+      sortDir: sortDirInput,
+    });
+  };
 
   const createCoupon = async () => {
     setSubmitting(true);
@@ -244,24 +285,37 @@ export default function CouponsPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Discount control</span>
-          <h1 className="admin-title mt-4">Coupons</h1>
-          <p className="admin-subtitle">Create and manage coupon codes for manual discount operations.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Coupons</h1>
+          <p className="mt-2 text-base text-slate-600">Create, tune, and retire promotional discounts with full audit reasons.</p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              ['Total', String(total || rows.length)],
-              ['Visible', String(rows.length)],
-              ['Active', String(activeCount)],
-            ].map(([label, value]) => (
-              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/80 p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-              </article>
-            ))}
+        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+          {[
+            ['Total', String(total || rows.length)],
+            ['Visible', String(rows.length)],
+            ['Active', String(activeCount)],
+            ['Has more', hasMore ? 'Yes' : 'No'],
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+            </article>
+          ))}
+        </div>
+      </header>
+
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+              <AdminIcon name="coupons" size={18} />
+            </span>
+            <div>
+              <h2 className="text-xl font-semibold text-slate-950">Create coupon</h2>
+              <p className="text-xs text-slate-500">Build a new coupon with discount constraints and mandatory audit reason.</p>
+            </div>
           </div>
           <CreateModal
             title="Create New Coupon"
@@ -381,30 +435,32 @@ export default function CouponsPage() {
             </div>
           </CreateModal>
         </div>
-      </header>
 
-      <section className="admin-surface">
+        <div className="mt-6 border-t border-slate-200 pt-5">
           <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600"><AdminIcon name="coupons" size={18} /></span>
+            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><AdminIcon name="coupons" size={18} /></span>
           <div>
-              <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+              <h2 className="text-xl font-semibold text-slate-950">Filters</h2>
             <p className="text-xs text-slate-500">Search, sort, and review coupon lifecycle states.</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <div className="mt-4 grid gap-2 md:grid-cols-6">
           <input
-              className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             placeholder="Search code or description"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+              }
+            }}
           />
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value);
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={statusInput}
+            onChange={(event) => setStatusInput(event.target.value)}
           >
             <option value="all">All statuses</option>
             <option value="active">active</option>
@@ -412,12 +468,9 @@ export default function CouponsPage() {
             <option value="expired">expired</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={sortBy}
-            onChange={(event) => {
-              setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount');
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={sortByInput}
+            onChange={(event) => setSortByInput(event.target.value as 'createdAt' | 'updatedAt' | 'discountValue' | 'code' | 'usedCount')}
           >
             <option value="createdAt">Sort: Created</option>
             <option value="updatedAt">Sort: Updated</option>
@@ -426,18 +479,15 @@ export default function CouponsPage() {
             <option value="usedCount">Sort: Used</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={sortDir}
-            onChange={(event) => {
-              setSortDir(event.target.value as 'asc' | 'desc');
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={sortDirInput}
+            onChange={(event) => setSortDirInput(event.target.value as 'asc' | 'desc')}
           >
             <option value="desc">Desc</option>
             <option value="asc">Asc</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={String(limit)}
             onChange={(event) => {
               setLimit(Number(event.target.value || 25));
@@ -450,22 +500,21 @@ export default function CouponsPage() {
             <option value="100">100 / page</option>
           </select>
           <button
-            className="admin-focus rounded-xl bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5"
+            className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             type="button"
-            onClick={() => {
-              setSkip(0);
-              void load();
-            }}
+            onClick={applyFilters}
           >
-            Search
+            <AdminIcon name="spark" size={14} />
+            Apply
           </button>
+        </div>
         </div>
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
             <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Coupon records</h2>
         </div>
 
@@ -476,7 +525,7 @@ export default function CouponsPage() {
         ) : (
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
-              <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Code</th>
                   <th className="px-5 py-3">Discount</th>
@@ -488,7 +537,7 @@ export default function CouponsPage() {
               </thead>
               <tbody>
                 {rows.map((row) => (
-                  <tr key={row._id} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
+                  <tr key={row._id} className="border-t border-slate-200 transition hover:bg-slate-50">
                     <td className="px-5 py-3">
                       <div className="font-medium text-slate-800">{row.code}</div>
                       <div className="text-xs text-slate-500">{row.description || '-'}</div>
@@ -496,7 +545,19 @@ export default function CouponsPage() {
                     <td className="px-5 py-3 text-slate-700">
                       {row.discountType === 'percent' ? `${row.discountValue}%` : `Rs ${row.discountValue}`}
                     </td>
-                    <td className="px-5 py-3 text-slate-700">{row.status}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
+                          row.status === 'active'
+                            ? 'bg-emerald-100 text-emerald-700'
+                            : row.status === 'inactive'
+                              ? 'bg-slate-100 text-slate-700'
+                              : 'bg-amber-100 text-amber-700'
+                        }`}
+                      >
+                        {row.status}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 text-slate-700">
                       {Number(row.usedCount || 0)} / {row.usageLimit ?? '-'}
                     </td>
@@ -519,7 +580,7 @@ export default function CouponsPage() {
                               reason,
                             });
                           }}
-                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {row.status === 'active' ? 'Deactivate' : 'Activate'}
                         </button>
@@ -539,7 +600,7 @@ export default function CouponsPage() {
                               reason,
                             });
                           }}
-                          className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Edit
                         </button>
@@ -547,7 +608,7 @@ export default function CouponsPage() {
                           type="button"
                           disabled={updatingId === row._id}
                           onClick={() => void deleteCoupon(row._id)}
-                          className="admin-focus rounded-xl border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="admin-focus rounded-lg border border-red-200 bg-red-50 px-2.5 py-1.5 text-xs text-red-700 shadow-sm transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           Delete
                         </button>
@@ -561,7 +622,7 @@ export default function CouponsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>
@@ -570,7 +631,7 @@ export default function CouponsPage() {
             type="button"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Previous
           </button>
@@ -578,7 +639,7 @@ export default function CouponsPage() {
             type="button"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Next
           </button>

@@ -50,7 +50,7 @@ type IntegrationUsagePayload = {
 function badgeClass(status: IntegrationRecord['status']) {
   if (status === 'healthy') return 'bg-emerald-100 text-emerald-700';
   if (status === 'degraded') return 'bg-amber-100 text-amber-700';
-  return 'bg-slate-200 text-slate-700';
+  return 'bg-slate-100 text-slate-700';
 }
 
 export default function IntegrationsPage() {
@@ -95,15 +95,26 @@ export default function IntegrationsPage() {
     return payload.summary;
   }, [payload]);
 
+  const usageSummary = useMemo(() => {
+    if (!usagePayload) return { healthy: 0, degraded: 0, missing: 0, total: 0 };
+    return usagePayload.summary;
+  }, [usagePayload]);
+
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Dependency health</span>
-          <h1 className="admin-title mt-4">Integrations</h1>
-          <p className="admin-subtitle">Operational health matrix for third-party and platform dependencies.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Integrations</h1>
+          <p className="mt-2 text-base text-slate-600">Operational health matrix for third-party and platform dependencies.</p>
         </div>
-        <button type="button" onClick={() => void load()} className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 lg:justify-self-end">
+
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 lg:justify-self-end"
+        >
+          <AdminIcon name="spark" size={14} />
           Run Health Check
         </button>
       </header>
@@ -111,26 +122,26 @@ export default function IntegrationsPage() {
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total Integrations</p>
           <p className="mt-2 text-2xl font-semibold text-slate-900">{summary.total}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Healthy</p>
           <p className="mt-2 text-2xl font-semibold text-emerald-700">{summary.healthy}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Degraded</p>
           <p className="mt-2 text-2xl font-semibold text-amber-700">{summary.degraded}</p>
         </article>
-        <article className="rounded-[22px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Missing Config</p>
           <p className="mt-2 text-2xl font-semibold text-slate-700">{summary.missing}</p>
         </article>
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Health Matrix</h2>
         </div>
 
@@ -151,10 +162,10 @@ export default function IntegrationsPage() {
               </thead>
               <tbody>
                 {payload.data.map((record) => (
-                  <tr key={record.key} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
+                  <tr key={record.key} className="border-t border-slate-200 transition hover:bg-slate-50">
                     <td className="px-5 py-3 font-medium text-slate-800">{record.label}</td>
                     <td className="px-5 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeClass(record.status)}`}>
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeClass(record.status)}`}>
                         {record.status}
                       </span>
                     </td>
@@ -168,8 +179,27 @@ export default function IntegrationsPage() {
         )}
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage Sources</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-900">{usageSummary.total}</p>
+        </article>
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage Healthy</p>
+          <p className="mt-2 text-2xl font-semibold text-emerald-700">{usageSummary.healthy}</p>
+        </article>
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage Degraded</p>
+          <p className="mt-2 text-2xl font-semibold text-amber-700">{usageSummary.degraded}</p>
+        </article>
+        <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Usage Missing</p>
+          <p className="mt-2 text-2xl font-semibold text-slate-700">{usageSummary.missing}</p>
+        </article>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Usage and Limits</h2>
         </div>
 
@@ -194,7 +224,7 @@ export default function IntegrationsPage() {
               </thead>
               <tbody>
                 {usagePayload.data.map((item) => (
-                  <tr key={item.key} className="border-t border-slate-200">
+                  <tr key={item.key} className="border-t border-slate-200 transition hover:bg-slate-50">
                     <td className="px-5 py-3 font-medium text-slate-800">{item.label}</td>
                     <td className="px-5 py-3 text-slate-700">
                       {item.usage === null ? '-' : `${item.usage.toLocaleString()} ${item.unit}`}
@@ -204,9 +234,13 @@ export default function IntegrationsPage() {
                     </td>
                     <td className="px-5 py-3 text-slate-700">{item.usagePercent === null ? '-' : `${item.usagePercent}%`}</td>
                     <td className="px-5 py-3 text-slate-700">{item.window}</td>
-                    <td className="px-5 py-3 text-slate-700">{item.source}</td>
                     <td className="px-5 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeClass(item.status)}`}>
+                      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                        {item.source}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${badgeClass(item.status)}`}>
                         {item.status}
                       </span>
                     </td>

@@ -1,9 +1,10 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 
-type KpiPayload = {
+type DashboardKpis = {
   totalUsers: number;
   activeSubscriptions: number;
   trialSubscriptions: number;
@@ -15,162 +16,438 @@ type KpiPayload = {
   serverTime: string;
 };
 
-function kpiCard(title: string, value: string, hint: string) {
+type AnalyticsKpis = {
+  newUsers30d: number;
+  activeUsers30d: number;
+  conversionRate: number;
+  supportClosureRate: number;
+  paymentsByStatus: Array<{ status: string; count: number }>;
+  activePlanMix: Array<{ plan: string; count: number }>;
+  googleAnalytics: {
+    source: 'live-api' | 'config-missing' | 'error';
+    configured: boolean;
+    eventCount30d: number | null;
+    activeUsers30d: number | null;
+    sessions30d: number | null;
+    message: string;
+  };
+  generatedAt: string;
+};
+
+type DashboardData = {
+  kpis: DashboardKpis;
+  analytics: AnalyticsKpis | null;
+};
+
+function formatNumber(value: number) {
+  return Number(value || 0).toLocaleString('en-IN');
+}
+
+function formatCurrency(value: number) {
+  return `INR ${Number(value || 0).toLocaleString('en-IN')}`;
+}
+
+function pct(part: number, whole: number) {
+  if (!whole || whole <= 0) return 0;
+  return Math.max(0, Math.min(100, (part / whole) * 100));
+}
+
+function toneForStatus(status: string) {
+  const key = String(status || '').toLowerCase();
+  if (['captured', 'completed', 'success', 'successful', 'paid'].includes(key)) {
+    return 'bg-emerald-500';
+  }
+  if (['failed', 'cancelled', 'declined', 'refunded'].includes(key)) {
+    return 'bg-rose-500';
+  }
+  if (['pending', 'requested', 'processing'].includes(key)) {
+    return 'bg-amber-500';
+  }
+  return 'bg-slate-500';
+}
+
+function donutProgress(value: number, total: number) {
+  const ratio = total > 0 ? Math.max(0, Math.min(1, value / total)) : 0;
+  const circumference = 2 * Math.PI * 42;
+  return {
+    dasharray: `${circumference} ${circumference}`,
+    dashoffset: circumference * (1 - ratio),
+    percent: Math.round(ratio * 100),
+  };
+}
+
+function StatCard({ title, value, hint }: { title: string; value: string; hint: string }) {
   return (
-    <article className="group rounded-[26px] border border-slate-200 bg-white/88 p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-panel">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{title}</p>
-      <p className="mt-3 font-display text-3xl font-semibold tracking-tight text-slate-950">{value}</p>
-      <p className="mt-2 text-sm text-slate-500">{hint}</p>
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      <p className="mt-2 text-3xl font-semibold leading-none text-slate-950">{value}</p>
+      <p className="mt-2 text-sm text-slate-600">{hint}</p>
     </article>
   );
 }
 
 export default function DashboardPage() {
-  const [data, setData] = useState<KpiPayload | null>(null);
+  const [payload, setPayload] = useState<DashboardData | null>(null);
+  const [rangeDays, setRangeDays] = useState<7 | 30 | 90>(30);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const overviewBars = useMemo(() => {
-    if (!data) return [];
-    const entries = [
-      { label: 'Users', value: data.totalUsers },
-      { label: 'Active subs', value: data.activeSubscriptions },
-      { label: 'Trials', value: data.trialSubscriptions },
-      { label: 'Support', value: data.openTickets + data.openContactRequests },
-      { label: 'Revenue', value: Math.max(1, Math.round(data.monthlyRevenue / 1000)) },
-    ];
-    const max = Math.max(...entries.map((entry) => entry.value), 1);
-    return entries.map((entry) => ({ ...entry, width: Math.max(12, Math.round((entry.value / max) * 100)) }));
-  }, [data]);
-
-  const glowNumber = useMemo(() => {
-    if (!data) return '0';
-    return Number(data.monthlyRevenue || 0).toLocaleString('en-IN');
-  }, [data]);
 
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       setError('');
       try {
-        const response = await fetch('/api/dashboard/kpis');
-        const payload = await response.json();
-        if (!response.ok || !payload?.success) {
-          throw new Error(payload?.error || 'Failed to load dashboard KPIs');
+        const [kpisResponse, analyticsResponse] = await Promise.all([
+          fetch('/api/dashboard/kpis', { cache: 'no-store' }),
+          fetch(`/api/analytics/kpis?days=${rangeDays}`, { cache: 'no-store' }),
+        ]);
+
+        const kpisPayload = await kpisResponse.json();
+        if (!kpisResponse.ok || !kpisPayload?.success) {
+          throw new Error(kpisPayload?.error || 'Failed to load dashboard data');
         }
-        setData(payload.data);
+
+        let analyticsData: AnalyticsKpis | null = null;
+        if (analyticsResponse.ok) {
+          const analyticsPayload = await analyticsResponse.json();
+          if (analyticsPayload?.success && analyticsPayload?.data) {
+            analyticsData = analyticsPayload.data as AnalyticsKpis;
+          }
+        }
+
+        setPayload({
+          kpis: kpisPayload.data as DashboardKpis,
+          analytics: analyticsData,
+        });
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard KPIs');
+        setError(loadError instanceof Error ? loadError.message : 'Failed to load dashboard');
       } finally {
         setLoading(false);
       }
     };
 
     void load();
-  }, []);
+  }, [rangeDays]);
+
+  const supportBacklog = useMemo(() => {
+    if (!payload) return 0;
+    return (payload.kpis.openTickets || 0) + (payload.kpis.openContactRequests || 0);
+  }, [payload]);
+
+  const paymentStatusTotal = useMemo(() => {
+    if (!payload?.analytics?.paymentsByStatus?.length) return 0;
+    return payload.analytics.paymentsByStatus.reduce((sum, row) => sum + Number(row.count || 0), 0);
+  }, [payload]);
+
+  const engagementBars = useMemo(() => {
+    const ga = payload?.analytics?.googleAnalytics;
+    const source = [
+      { label: 'Active users', value: Number(ga?.activeUsers30d || 0) },
+      { label: 'Sessions', value: Number(ga?.sessions30d || 0) },
+      { label: 'Events', value: Number(ga?.eventCount30d || 0) },
+    ];
+    const max = Math.max(...source.map((item) => item.value), 1);
+    return source.map((item) => ({
+      ...item,
+      height: Math.max(12, Math.round((item.value / max) * 100)),
+    }));
+  }, [payload]);
+
+  const monthlyRevenueDonut = useMemo(() => {
+    const monthly = Number(payload?.kpis.monthlyRevenue || 0);
+    const total = Number(payload?.kpis.totalRevenue || 0);
+    return donutProgress(monthly, total);
+  }, [payload]);
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
-        <div className="max-w-3xl">
-          <span className="admin-chip">Command center</span>
-          <h1 className="admin-title mt-4">Dashboard</h1>
-          <p className="admin-subtitle">
-            A connected operational overview of users, subscriptions, support load, notifications, and revenue.
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+        <div>
+          <span className="admin-chip">Operations dashboard</span>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Dashboard</h1>
+          <p className="mt-2 max-w-3xl text-base text-slate-600">
+            Real-time business and product signals from subscriptions, payments, support, and Google Analytics.
           </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
-          {[
-            ['Live revenue', `INR ${glowNumber}`],
-            ['Open support', String((data?.openTickets || 0) + (data?.openContactRequests || 0))],
-            ['Server time', data ? new Date(data.serverTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--'],
-          ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+
+        {payload ? (
+          <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Monthly revenue</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{formatCurrency(payload.kpis.monthlyRevenue)}</p>
             </article>
-          ))}
-        </div>
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Support backlog</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{formatNumber(supportBacklog)}</p>
+            </article>
+            <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Server time</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{new Date(payload.kpis.serverTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+            </article>
+            <label className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Analytics range</p>
+              <select
+                value={rangeDays}
+                onChange={(event) => setRangeDays(Number(event.target.value) as 7 | 30 | 90)}
+                className="admin-focus mt-2 w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm"
+              >
+                <option value={7}>Last 7 days</option>
+                <option value={30}>Last 30 days</option>
+                <option value={90}>Last 90 days</option>
+              </select>
+            </label>
+          </div>
+        ) : null}
       </header>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       {loading ? (
         <p className="admin-surface px-5 py-4 text-sm text-slate-500">Loading dashboard...</p>
-      ) : data ? (
+      ) : payload ? (
         <>
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {kpiCard('Total Users', String(data.totalUsers), 'Customer accounts only')}
-            {kpiCard('Active Subscriptions', String(data.activeSubscriptions), 'Current paying users')}
-            {kpiCard('Trial Subscriptions', String(data.trialSubscriptions), 'Users currently on trial')}
-            {kpiCard('Cancelled Subscriptions', String(data.cancelledSubscriptions), 'Total cancelled users')}
+            <Link href="/users" className="block">
+              <StatCard title="Total users" value={formatNumber(payload.kpis.totalUsers)} hint="Customer accounts" />
+            </Link>
+            <Link href="/subscriptions" className="block">
+              <StatCard title="Active subscriptions" value={formatNumber(payload.kpis.activeSubscriptions)} hint="Currently paying" />
+            </Link>
+            <Link href="/subscriptions" className="block">
+              <StatCard title="Trial subscriptions" value={formatNumber(payload.kpis.trialSubscriptions)} hint="In trial period" />
+            </Link>
+            <Link href="/subscriptions" className="block">
+              <StatCard title="Cancelled subscriptions" value={formatNumber(payload.kpis.cancelledSubscriptions)} hint="Historical churn" />
+            </Link>
           </section>
 
-          <section className="grid grid-cols-1 gap-5 xl:grid-cols-[0.95fr_1.05fr]">
-            <article className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-              <div className="flex items-center justify-between">
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-[1.2fr_0.8fr]">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-5 flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Operational mix</p>
-                  <h2 className="mt-2 font-display text-xl font-semibold text-slate-950">Live load distribution</h2>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Customer health funnel</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-slate-950">Acquisition to conversion</h2>
                 </div>
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Updated live</span>
+                <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">{rangeDays}-day context</span>
               </div>
-              <div className="mt-6 space-y-4">
-                {overviewBars.map((entry) => (
-                  <div key={entry.label}>
-                    <div className="mb-2 flex items-center justify-between text-sm">
-                      <span className="font-medium text-slate-700">{entry.label}</span>
-                      <span className="text-slate-500">{entry.value.toLocaleString('en-IN')}</span>
+
+              <div className="space-y-4">
+                {[
+                  {
+                    label: `New users (${rangeDays}d)`,
+                    value: Number(payload.analytics?.newUsers30d || 0),
+                    ratio: pct(Number(payload.analytics?.newUsers30d || 0), Number(payload.kpis.totalUsers || 0)),
+                  },
+                  {
+                    label: `Active users (${rangeDays}d)`,
+                    value: Number(payload.analytics?.activeUsers30d || 0),
+                    ratio: pct(Number(payload.analytics?.activeUsers30d || 0), Number(payload.kpis.totalUsers || 0)),
+                  },
+                  {
+                    label: 'Active subscriptions',
+                    value: Number(payload.kpis.activeSubscriptions || 0),
+                    ratio: pct(Number(payload.kpis.activeSubscriptions || 0), Number(payload.kpis.totalUsers || 0)),
+                  },
+                  {
+                    label: 'Support backlog',
+                    value: Number(supportBacklog || 0),
+                    ratio: pct(Number(supportBacklog || 0), Math.max(1, Number(payload.kpis.totalUsers || 0))),
+                  },
+                ].map((row) => (
+                  <div key={row.label} className="space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <p className="font-medium text-slate-700">{row.label}</p>
+                      <p className="text-slate-500">{formatNumber(row.value)}</p>
                     </div>
-                    <div className="h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-brand-600 via-cyan-500 to-sky-400 transition-all duration-700 ease-out"
-                        style={{ width: `${entry.width}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 transition-all duration-700"
+                        style={{ width: `${Math.max(8, Math.round(row.ratio))}%` }}
                       />
                     </div>
                   </div>
                 ))}
               </div>
+
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <Link href="/analytics" className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Conversion rate</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-950">{payload.analytics ? `${payload.analytics.conversionRate.toFixed(1)}%` : '--'}</p>
+                </Link>
+                <Link href="/support/tickets" className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Support closure</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-950">{payload.analytics ? `${payload.analytics.supportClosureRate.toFixed(1)}%` : '--'}</p>
+                </Link>
+                <Link href="/contact-requests" className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Open contact requests</p>
+                  <p className="mt-1 text-xl font-semibold text-slate-950">{formatNumber(payload.kpis.openContactRequests)}</p>
+                </Link>
+              </div>
             </article>
 
-            <article className="rounded-[28px] border border-slate-200 bg-slate-950 p-5 text-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
-              <div className="flex items-center justify-between">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
                 <div>
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/65">Revenue pulse</p>
-                  <h2 className="mt-2 font-display text-xl font-semibold">Monthly activity chart</h2>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Revenue composition</p>
+                  <h2 className="mt-1 text-2xl font-semibold text-slate-950">Monthly vs total</h2>
                 </div>
-                <AdminIcon name="chart" className="text-cyan-300" />
+                <AdminIcon name="payments" className="text-slate-500" />
               </div>
-              <div className="mt-6 grid h-64 grid-cols-6 items-end gap-3">
-                {overviewBars.map((entry, index) => (
-                  <div key={entry.label} className="flex h-full flex-col justify-end gap-2">
-                    <div className="flex items-end justify-center">
-                      <div
-                        className="w-full rounded-t-2xl bg-gradient-to-t from-cyan-400 via-brand-500 to-brand-300 shadow-[0_18px_40px_rgba(37,99,235,0.28)] transition-transform duration-300 hover:scale-y-105"
-                        style={{ height: `${28 + entry.width * 1.9}px` }}
-                      />
-                    </div>
-                    <div>
-                      <p className="text-center text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">{entry.label}</p>
-                      <p className="mt-1 text-center text-sm font-semibold text-white">{index === 4 ? `INR ${entry.value.toLocaleString('en-IN')}` : entry.value.toLocaleString('en-IN')}</p>
-                    </div>
+
+              <div className="mx-auto grid w-full max-w-[260px] place-items-center">
+                <svg viewBox="0 0 100 100" className="h-52 w-52">
+                  <circle cx="50" cy="50" r="42" fill="none" stroke="#e2e8f0" strokeWidth="10" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="42"
+                    fill="none"
+                    stroke="url(#revGradient)"
+                    strokeWidth="10"
+                    strokeLinecap="round"
+                    strokeDasharray={monthlyRevenueDonut.dasharray}
+                    strokeDashoffset={monthlyRevenueDonut.dashoffset}
+                    transform="rotate(-90 50 50)"
+                  />
+                  <defs>
+                    <linearGradient id="revGradient" x1="0%" x2="100%" y1="0%" y2="0%">
+                      <stop offset="0%" stopColor="#0ea5e9" />
+                      <stop offset="100%" stopColor="#2563eb" />
+                    </linearGradient>
+                  </defs>
+                  <text x="50" y="46" textAnchor="middle" className="fill-slate-500 text-[7px] font-semibold uppercase tracking-wide">
+                    Monthly share
+                  </text>
+                  <text x="50" y="56" textAnchor="middle" className="fill-slate-900 text-[12px] font-semibold">
+                    {monthlyRevenueDonut.percent}%
+                  </text>
+                </svg>
+              </div>
+
+              <div className="space-y-2 border-t border-slate-200 pt-3 text-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Monthly revenue</span>
+                  <span className="font-semibold text-slate-950">{formatCurrency(payload.kpis.monthlyRevenue)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-600">Total revenue</span>
+                  <span className="font-semibold text-slate-950">{formatCurrency(payload.kpis.totalRevenue)}</span>
+                </div>
+              </div>
+              <Link href="/payments" className="mt-4 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                View payments
+                <span aria-hidden="true">&gt;</span>
+              </Link>
+            </article>
+          </section>
+
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Google Analytics</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Engagement snapshot</h2>
+                </div>
+                <AdminIcon name="analytics" className="text-slate-500" />
+              </div>
+
+              <div className="grid h-40 grid-cols-3 items-end gap-3">
+                {engagementBars.map((entry) => (
+                  <div key={entry.label} className="flex flex-col items-center gap-2">
+                    <div className="text-xs font-medium text-slate-500">{formatNumber(entry.value)}</div>
+                    <div className="w-full rounded-t-lg bg-gradient-to-t from-sky-500 to-blue-400" style={{ height: `${entry.height}%` }} />
+                    <div className="text-center text-xs font-semibold text-slate-600">{entry.label}</div>
                   </div>
                 ))}
               </div>
+
+              <p className="mt-3 text-xs text-slate-500">
+                {payload.analytics?.googleAnalytics.message || 'Analytics service data unavailable'}
+              </p>
+              <Link href="/analytics" className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                Open analytics
+                <span aria-hidden="true">&gt;</span>
+              </Link>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Payments</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Status distribution</h2>
+                </div>
+                <AdminIcon name="status" className="text-slate-500" />
+              </div>
+
+              <div className="space-y-3">
+                {(payload.analytics?.paymentsByStatus || []).map((row) => {
+                  const count = Number(row.count || 0);
+                  const width = paymentStatusTotal > 0 ? Math.max(8, Math.round((count / paymentStatusTotal) * 100)) : 0;
+                  return (
+                    <div key={row.status} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700 capitalize">{row.status || 'Unknown'}</span>
+                        <span className="text-slate-500">{formatNumber(count)}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className={`h-full rounded-full ${toneForStatus(row.status)}`} style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!payload.analytics?.paymentsByStatus || payload.analytics.paymentsByStatus.length === 0) ? (
+                  <p className="text-sm text-slate-500">No payment status data found.</p>
+                ) : null}
+              </div>
+              <Link href="/payments" className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                Open payments
+                <span aria-hidden="true">&gt;</span>
+              </Link>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Subscriptions</p>
+                  <h2 className="mt-1 text-xl font-semibold text-slate-950">Plan mix</h2>
+                </div>
+                <AdminIcon name="subscriptions" className="text-slate-500" />
+              </div>
+
+              <div className="space-y-3">
+                {(payload.analytics?.activePlanMix || []).map((row) => {
+                  const total = (payload.analytics?.activePlanMix || []).reduce((sum, item) => sum + Number(item.count || 0), 0);
+                  const width = total > 0 ? Math.max(8, Math.round((Number(row.count || 0) / total) * 100)) : 0;
+                  return (
+                    <div key={row.plan} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="font-medium text-slate-700 capitalize">{row.plan || 'Unknown'}</span>
+                        <span className="text-slate-500">{formatNumber(row.count || 0)}</span>
+                      </div>
+                      <div className="h-2.5 overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-500" style={{ width: `${width}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+                {(!payload.analytics?.activePlanMix || payload.analytics.activePlanMix.length === 0) ? (
+                  <p className="text-sm text-slate-500">No active plan mix data found.</p>
+                ) : null}
+              </div>
+              <Link href="/subscriptions" className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+                Open subscriptions
+                <span aria-hidden="true">&gt;</span>
+              </Link>
             </article>
           </section>
 
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {kpiCard('Open Tickets', String(data.openTickets), 'Support tickets needing action')}
-            {kpiCard('Open Contact Requests', String(data.openContactRequests), 'Contact inbox pending items')}
-            {kpiCard('Total Revenue', `INR ${Number(data.totalRevenue || 0).toLocaleString('en-IN')}`, 'Captured/completed payments')}
-            {kpiCard('Monthly Revenue', `INR ${Number(data.monthlyRevenue || 0).toLocaleString('en-IN')}`, 'Current month revenue')}
-          </section>
-
-          <p className="text-xs text-slate-500">Server time: {new Date(data.serverTime).toLocaleString()}</p>
+          <footer className="flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-xs text-slate-500">
+            <span>Server time: {new Date(payload.kpis.serverTime).toLocaleString()}</span>
+            <span>Analytics refreshed: {payload.analytics ? new Date(payload.analytics.generatedAt).toLocaleString() : 'Unavailable'}</span>
+          </footer>
         </>
       ) : (
-        <p className="admin-surface px-5 py-4 text-sm text-slate-500">No KPI data available.</p>
+        <p className="admin-surface px-5 py-4 text-sm text-slate-500">No dashboard data available.</p>
       )}
     </main>
   );

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type UserRow = {
@@ -21,6 +21,34 @@ type UserRow = {
 };
 
 const STORAGE_KEY = 'lp_admin_users_table_v1';
+
+function userDisplayName(row: UserRow) {
+  return row.fullName || row.username || row.userId;
+}
+
+function userInitials(row: UserRow) {
+  const source = userDisplayName(row);
+  const initials = source
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('');
+  return initials || 'U';
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString();
+}
+
+function subscriptionTone(status: string) {
+  const key = String(status || '').toLowerCase();
+  if (['active', 'active_subscription'].includes(key)) return 'bg-emerald-100 text-emerald-700';
+  if (['trial'].includes(key)) return 'bg-sky-100 text-sky-700';
+  if (['cancelled', 'expired', 'suspended'].includes(key)) return 'bg-rose-100 text-rose-700';
+  return 'bg-slate-100 text-slate-600';
+}
 
 export default function UsersPage() {
   const [rows, setRows] = useState<UserRow[]>([]);
@@ -49,9 +77,7 @@ export default function UsersPage() {
         sortDir,
       });
 
-      if (search.trim()) {
-        params.set('search', search.trim());
-      }
+      if (search.trim()) params.set('search', search.trim());
 
       const response = await fetch(`/api/users?${params.toString()}`);
       const payload = await response.json();
@@ -95,10 +121,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ search, status, sortBy, sortDir, limit })
-      );
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ search, status, sortBy, sortDir, limit }));
     } catch {
       // Ignore storage errors.
     }
@@ -195,10 +218,7 @@ export default function UsersPage() {
       const response = await fetch(`/api/users/${encodeURIComponent(row.userId)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          banned: !row.banned,
-          reason,
-        }),
+        body: JSON.stringify({ banned: !row.banned, reason }),
       });
 
       const payload = await response.json();
@@ -214,86 +234,102 @@ export default function UsersPage() {
     }
   };
 
+  const activeCount = useMemo(() => rows.filter((row) => !row.banned).length, [rows]);
+  const bannedCount = useMemo(() => rows.filter((row) => row.banned).length, [rows]);
+
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Customer operations</span>
-          <h1 className="admin-title mt-4">Users</h1>
-          <p className="admin-subtitle">Manage customer lifecycle records. New users are created from the web portal to keep Clerk and MongoDB creation in one flow.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Users</h1>
+          <p className="mt-2 text-base text-slate-600">
+            Customer directory, account state, and subscription snapshot in one operating view.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              ['Total', String(total || rows.length)],
-              ['Visible', String(rows.length)],
-              ['Filter', status === 'all' ? 'All' : status],
-            ].map(([label, value]) => (
-              <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-                <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
-              </article>
-            ))}
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-medium text-slate-600">
-            Customer onboarding is handled in the web portal.
-          </div>
+
+        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+          {[
+            ['Total', String(total || rows.length)],
+            ['Visible', String(rows.length)],
+            ['Active', String(activeCount)],
+            ['Banned', String(bannedCount)],
+          ].map(([label, value]) => (
+            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
+            </article>
+          ))}
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="users" size={18} /></span>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <AdminIcon name="users" size={18} />
+          </span>
           <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
-            <p className="text-xs text-slate-500">Search, sort, and narrow the user directory.</p>
+            <h2 className="text-xl font-semibold text-slate-950">Filters</h2>
+            <p className="text-sm text-slate-500">Search, sort, and narrow user records.</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 md:grid-cols-6">
+
+        <div className="grid gap-2 md:grid-cols-6">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             placeholder="Search user ID, name, email"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                setSkip(0);
+                void load();
+              }
+            }}
           />
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value as 'all' | 'active' | 'banned');
               setSkip(0);
             }}
           >
-            <option value="all">All</option>
-            <option value="active">Active</option>
-            <option value="banned">Banned</option>
+            <option value="all">All statuses</option>
+            <option value="active">Active only</option>
+            <option value="banned">Banned only</option>
           </select>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'email' | 'username');
               setSkip(0);
             }}
           >
-            <option value="createdAt">Sort: Created</option>
-            <option value="updatedAt">Sort: Updated</option>
-            <option value="email">Sort: Email</option>
-            <option value="username">Sort: Username</option>
+            <option value="createdAt">Sort by created</option>
+            <option value="updatedAt">Sort by updated</option>
+            <option value="email">Sort by email</option>
+            <option value="username">Sort by username</option>
           </select>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as 'asc' | 'desc');
               setSkip(0);
             }}
           >
-            <option value="desc">Desc</option>
-            <option value="asc">Asc</option>
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
           </select>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={String(limit)}
             onChange={(event) => {
               setLimit(Number(event.target.value || 25));
@@ -305,34 +341,36 @@ export default function UsersPage() {
             <option value="50">50 / page</option>
             <option value="100">100 / page</option>
           </select>
+
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             type="button"
             onClick={() => {
               setSkip(0);
               void load();
             }}
           >
-            🔍
+            <AdminIcon name="spark" size={14} />
+            Apply
           </button>
         </div>
       </section>
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">User records</h2>
         </div>
 
         {loading ? (
-          <p className="px-5 py-3 text-sm text-slate-500">Loading users...</p>
+          <p className="px-5 py-4 text-sm text-slate-500">Loading users...</p>
         ) : rows.length === 0 ? (
-          <p className="px-5 py-3 text-sm text-slate-500">No users found.</p>
+          <p className="px-5 py-4 text-sm text-slate-500">No users found.</p>
         ) : (
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
-              <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">User</th>
                   <th className="px-5 py-3">Email</th>
@@ -344,85 +382,91 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
-                  <tr key={row.userId} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
-                    <td className="px-5 py-3">
-                      <div className="font-medium text-slate-800">{row.fullName || row.username || row.userId}</div>
-                      <div className="text-xs text-slate-500">{row.userId}</div>
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">{row.email || '-'}</td>
-                    <td className="px-5 py-3 text-slate-700">{row.subscription?.plan || '-'}</td>
-                    <td className="px-5 py-3 text-slate-700">{row.subscription?.status || '-'}</td>
-                    <td className="px-5 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${row.banned ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                        {row.banned ? 'Banned' : 'Active'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-slate-700">{row.createdAt ? new Date(row.createdAt).toLocaleDateString() : '-'}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          title="Edit user"
-                          disabled={updatingUserId === row.userId}
-                          onClick={() => void editUser(row)}
-                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1 xs:gap-0"
-                        >
-                          <span className="inline xs:hidden">✏️ Edit</span>
-                          <span className="hidden xs:inline">✏️</span>
-                        </button>
-                        <button
-                          type="button"
-                          title={row.banned ? 'Restore user' : 'Suspend user'}
-                          disabled={updatingUserId === row.userId}
-                          onClick={() => void toggleSuspension(row)}
-                          className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1 xs:gap-0"
-                        >
-                          <span className="inline xs:hidden">{updatingUserId === row.userId ? '⏳ Suspend' : row.banned ? '✓ Restore' : '⊗ Suspend'}</span>
-                          <span className="hidden xs:inline">{updatingUserId === row.userId ? '...' : row.banned ? '✓' : '⊗'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          title="Delete user"
-                          disabled={updatingUserId === row.userId}
-                          onClick={() => void deleteUser(row)}
-                          className="admin-focus rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-sm text-red-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-60 flex items-center gap-1 xs:gap-0"
-                        >
-                          <span className="inline xs:hidden">🗑️ Delete</span>
-                          <span className="hidden xs:inline">🗑️</span>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {rows.map((row) => {
+                  const subStatus = String(row.subscription?.status || '-');
+                  return (
+                    <tr key={row.userId} className="border-t border-slate-200 transition hover:bg-slate-50">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-700">
+                            {userInitials(row)}
+                          </span>
+                          <div>
+                            <p className="font-medium text-slate-900">{userDisplayName(row)}</p>
+                            <p className="text-xs text-slate-500">{row.userId}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">{row.email || '-'}</td>
+                      <td className="px-5 py-4 text-slate-700 capitalize">{row.subscription?.plan || '-'}</td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${subscriptionTone(subStatus)}`}>
+                          {subStatus}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${row.banned ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                          {row.banned ? 'Banned' : 'Active'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">{formatDate(row.createdAt)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            disabled={updatingUserId === row.userId}
+                            onClick={() => void editUser(row)}
+                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingUserId === row.userId}
+                            onClick={() => void toggleSuspension(row)}
+                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            {updatingUserId === row.userId ? 'Saving...' : row.banned ? 'Restore' : 'Suspend'}
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingUserId === row.userId}
+                            onClick={() => void deleteUser(row)}
+                            className="admin-focus rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            title="Previous page"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            ←
+            Previous
           </button>
           <button
             type="button"
-            title="Next page"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            →
+            Next
           </button>
         </div>
       </section>

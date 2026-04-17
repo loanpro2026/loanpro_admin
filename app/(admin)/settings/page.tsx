@@ -130,15 +130,26 @@ export default function SettingsPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Platform settings</span>
-          <h1 className="admin-title mt-4">Settings</h1>
-          <p className="admin-subtitle">Configure support SLAs, security policy, billing controls, and feature toggles.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Settings</h1>
+          <p className="mt-2 text-base text-slate-600">Configure support SLAs, security policy, billing controls, and feature toggles.</p>
         </div>
-        <div className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm lg:justify-self-end">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Notification retention</p>
-          <p className="mt-2 font-display text-xl font-semibold text-slate-950">{form.notifications.retentionDays} days</p>
+
+        <div className="grid gap-3 sm:grid-cols-3 lg:justify-self-end">
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Retention</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{form.notifications.retentionDays}d</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">MFA</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{form.security.enforceMfa ? 'On' : 'Off'}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Session</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{form.security.sessionTimeoutMinutes}m</p>
+          </article>
         </div>
       </header>
 
@@ -146,19 +157,19 @@ export default function SettingsPage() {
       {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
 
       {loading ? (
-        <p className="rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 text-sm text-slate-500 shadow-sm">Loading settings...</p>
+        <p className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">Loading settings...</p>
       ) : (
         <form className="space-y-6" onSubmit={save}>
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="support" /></span>
-              <h2 className="font-display text-xl font-semibold text-slate-950">Support Ops</h2>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><AdminIcon name="support" size={18} /></span>
+              <h2 className="text-xl font-semibold text-slate-950">Support Ops</h2>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Default Assignee</span>
                 <input
-                  className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                   value={form.support.defaultAssignee}
                   onChange={(event) =>
                     setForm((prev) => ({
@@ -175,7 +186,7 @@ export default function SettingsPage() {
               <label className="space-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">SLA Hours</span>
                 <input
-                  className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                   type="number"
                   min={1}
                   max={168}
@@ -194,16 +205,16 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-            <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="payments" /></span>
-              <h2 className="font-display text-xl font-semibold text-slate-950">Billing Controls</h2>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><AdminIcon name="payments" size={18} /></span>
+              <h2 className="text-xl font-semibold text-slate-950">Billing Controls</h2>
             </div>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Refund Approval Threshold (INR)</span>
                 <input
-                  className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                   type="number"
                   min={0}
                   value={form.billing.refundApprovalThreshold}
@@ -218,7 +229,7 @@ export default function SettingsPage() {
                   }
                 />
               </label>
-              <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.billing.autoReconcile}
@@ -237,10 +248,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-            <h2 className="font-display text-xl font-semibold text-slate-950">Security Policy</h2>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">Security Policy</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.security.enforceMfa}
@@ -259,7 +270,7 @@ export default function SettingsPage() {
               <label className="space-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Session Timeout (minutes)</span>
                 <input
-                  className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                   type="number"
                   min={5}
                   max={1440}
@@ -278,10 +289,10 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-            <h2 className="font-display text-xl font-semibold text-slate-950">Feature Flags</h2>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">Feature Flags</h2>
             <div className="mt-4 grid gap-3">
-              <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.features.enableContactAutoAssign}
@@ -297,7 +308,7 @@ export default function SettingsPage() {
                 />
                 Enable auto-assignment for contact requests
               </label>
-              <label className="flex items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm text-slate-700">
+              <label className="flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-sm text-slate-700">
                 <input
                   type="checkbox"
                   checked={form.features.enableRefundQueueAlerts}
@@ -316,13 +327,13 @@ export default function SettingsPage() {
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-            <h2 className="font-display text-xl font-semibold text-slate-950">Notifications</h2>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-950">Notifications</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
               <label className="space-y-1">
                 <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Retention Days</span>
                 <input
-                  className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                  className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                   type="number"
                   min={1}
                   max={365}
@@ -338,17 +349,17 @@ export default function SettingsPage() {
                   }
                 />
               </label>
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+              <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
                 Notifications older than this value will be auto-cleaned from MongoDB using TTL behavior.
               </p>
             </div>
           </section>
 
-          <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <label className="space-y-1">
               <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">Reason for Change</span>
               <input
-                className="admin-focus w-full rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+                className="admin-focus w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 minLength={3}
@@ -360,7 +371,7 @@ export default function SettingsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="admin-focus rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {saving ? 'Saving...' : 'Save Settings'}
               </button>
@@ -368,7 +379,7 @@ export default function SettingsPage() {
                 type="button"
                 onClick={() => void load()}
                 disabled={saving}
-                className="admin-focus rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 Reset
               </button>

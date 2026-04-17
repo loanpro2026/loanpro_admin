@@ -20,14 +20,20 @@ export default function RolesPage() {
   const [creating, setCreating] = useState(false);
   const [updatingRoleKey, setUpdatingRoleKey] = useState('');
   const [deletingRoleKey, setDeletingRoleKey] = useState('');
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'system' | 'custom'>('all');
+  const [searchInput, setSearchInput] = useState('');
+  const [typeFilterInput, setTypeFilterInput] = useState<'all' | 'system' | 'custom'>('all');
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(false);
-  const [sortBy, setSortBy] = useState<'updatedAt' | 'name' | 'key'>('updatedAt');
-  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [sortByInput, setSortByInput] = useState<'updatedAt' | 'name' | 'key'>('updatedAt');
+  const [sortDirInput, setSortDirInput] = useState<'asc' | 'desc'>('desc');
+  const [appliedQuery, setAppliedQuery] = useState({
+    search: '',
+    typeFilter: 'all' as 'all' | 'system' | 'custom',
+    sortBy: 'updatedAt' as 'updatedAt' | 'name' | 'key',
+    sortDir: 'desc' as 'asc' | 'desc',
+  });
 
   const [newKey, setNewKey] = useState('');
   const [newName, setNewName] = useState('');
@@ -44,11 +50,11 @@ export default function RolesPage() {
       const params = new URLSearchParams({
         limit: String(limit),
         skip: String(skip),
-        type: typeFilter,
-        sortBy,
-        sortDir,
+        type: appliedQuery.typeFilter,
+        sortBy: appliedQuery.sortBy,
+        sortDir: appliedQuery.sortDir,
       });
-      if (search.trim()) params.set('search', search.trim());
+      if (appliedQuery.search.trim()) params.set('search', appliedQuery.search.trim());
 
       const response = await fetch(`/api/roles?${params.toString()}`);
       const payload = await response.json();
@@ -70,19 +76,31 @@ export default function RolesPage() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
-        search?: string;
-        typeFilter?: 'all' | 'system' | 'custom';
-        sortBy?: 'updatedAt' | 'name' | 'key';
-        sortDir?: 'asc' | 'desc';
+        searchInput?: string;
+        typeFilterInput?: 'all' | 'system' | 'custom';
+        sortByInput?: 'updatedAt' | 'name' | 'key';
+        sortDirInput?: 'asc' | 'desc';
         limit?: number;
       };
-      if (typeof parsed.search === 'string') setSearch(parsed.search);
-      if (parsed.typeFilter === 'all' || parsed.typeFilter === 'system' || parsed.typeFilter === 'custom') {
-        setTypeFilter(parsed.typeFilter);
+      if (typeof parsed.searchInput === 'string') setSearchInput(parsed.searchInput);
+      if (parsed.typeFilterInput === 'all' || parsed.typeFilterInput === 'system' || parsed.typeFilterInput === 'custom') {
+        setTypeFilterInput(parsed.typeFilterInput);
       }
-      if (parsed.sortBy === 'updatedAt' || parsed.sortBy === 'name' || parsed.sortBy === 'key') setSortBy(parsed.sortBy);
-      if (parsed.sortDir === 'asc' || parsed.sortDir === 'desc') setSortDir(parsed.sortDir);
+      if (parsed.sortByInput === 'updatedAt' || parsed.sortByInput === 'name' || parsed.sortByInput === 'key') {
+        setSortByInput(parsed.sortByInput);
+      }
+      if (parsed.sortDirInput === 'asc' || parsed.sortDirInput === 'desc') setSortDirInput(parsed.sortDirInput);
       if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
+
+      setAppliedQuery({
+        search: typeof parsed.searchInput === 'string' ? parsed.searchInput : '',
+        typeFilter:
+          parsed.typeFilterInput === 'all' || parsed.typeFilterInput === 'system' || parsed.typeFilterInput === 'custom'
+            ? parsed.typeFilterInput
+            : 'all',
+        sortBy: parsed.sortByInput === 'updatedAt' || parsed.sortByInput === 'name' || parsed.sortByInput === 'key' ? parsed.sortByInput : 'updatedAt',
+        sortDir: parsed.sortDirInput === 'asc' || parsed.sortDirInput === 'desc' ? parsed.sortDirInput : 'desc',
+      });
     } catch {
       // Ignore invalid saved preferences
     }
@@ -92,16 +110,26 @@ export default function RolesPage() {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ search, typeFilter, sortBy, sortDir, limit })
+        JSON.stringify({ searchInput, typeFilterInput, sortByInput, sortDirInput, limit })
       );
     } catch {
       // Ignore storage errors
     }
-  }, [search, typeFilter, sortBy, sortDir, limit]);
+  }, [searchInput, typeFilterInput, sortByInput, sortDirInput, limit]);
 
   useEffect(() => {
     void loadRoles();
-  }, [skip, sortBy, sortDir, limit]);
+  }, [skip, limit, appliedQuery.search, appliedQuery.typeFilter, appliedQuery.sortBy, appliedQuery.sortDir]);
+
+  const applyFilters = () => {
+    setSkip(0);
+    setAppliedQuery({
+      search: searchInput.trim(),
+      typeFilter: typeFilterInput,
+      sortBy: sortByInput,
+      sortDir: sortDirInput,
+    });
+  };
 
   const handleCreateRole = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -239,71 +267,82 @@ export default function RolesPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Authorization control</span>
-          <h1 className="admin-title mt-4">Roles and Permissions</h1>
-          <p className="admin-subtitle">Manage role templates and permission sets for the admin control plane.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Roles and Permissions</h1>
+          <p className="mt-2 text-base text-slate-600">Define role templates, control permission boundaries, and protect privileged operations.</p>
         </div>
-        <div className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm lg:justify-self-end">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Role catalog</p>
-          <p className="mt-2 font-display text-xl font-semibold text-slate-950">{roleCountText}</p>
+        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visible</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.length}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{total}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">System</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.filter((role) => role.isSystemRole).length}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Custom</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{roles.filter((role) => !role.isSystemRole).length}</p>
+          </article>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><AdminIcon name="roles" size={18} /></span>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700"><AdminIcon name="roles" size={18} /></span>
           <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+            <h2 className="text-xl font-semibold text-slate-950">Filters</h2>
             <p className="text-xs text-slate-500">Search role templates and permission sets.</p>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
+        <div className="grid gap-2 md:grid-cols-6">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             placeholder="Search role key or name"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+              }
+            }}
           />
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={typeFilter}
-            onChange={(event) => {
-              setTypeFilter(event.target.value as 'all' | 'system' | 'custom');
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={typeFilterInput}
+            onChange={(event) => setTypeFilterInput(event.target.value as 'all' | 'system' | 'custom')}
           >
             <option value="all">All types</option>
             <option value="system">System</option>
             <option value="custom">Custom</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={sortBy}
-            onChange={(event) => {
-              setSortBy(event.target.value as 'updatedAt' | 'name' | 'key');
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={sortByInput}
+            onChange={(event) => setSortByInput(event.target.value as 'updatedAt' | 'name' | 'key')}
           >
             <option value="updatedAt">Sort: Updated</option>
             <option value="name">Sort: Name</option>
             <option value="key">Sort: Key</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            value={sortDir}
-            onChange={(event) => {
-              setSortDir(event.target.value as 'asc' | 'desc');
-              setSkip(0);
-            }}
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={sortDirInput}
+            onChange={(event) => setSortDirInput(event.target.value as 'asc' | 'desc')}
           >
             <option value="desc">Desc</option>
             <option value="asc">Asc</option>
           </select>
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={String(limit)}
             onChange={(event) => {
               setLimit(Number(event.target.value || 25));
@@ -317,22 +356,21 @@ export default function RolesPage() {
           </select>
           <button
             type="button"
-            onClick={() => {
-              setSkip(0);
-              void loadRoles();
-            }}
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            onClick={applyFilters}
+            className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
           >
-            Search
+            <AdminIcon name="spark" size={14} />
+            Apply
           </button>
         </div>
       </section>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Create custom role</h2>
-        <form className="mt-4 grid gap-3 md:grid-cols-2" onSubmit={handleCreateRole}>
+        <p className="mt-2 text-sm text-slate-500">Custom roles require valid permissions and a mandatory audit reason.</p>
+        <form className="mt-4 grid gap-2 md:grid-cols-2" onSubmit={handleCreateRole}>
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             type="text"
             required
             placeholder="role key (example: ops_l1)"
@@ -340,7 +378,7 @@ export default function RolesPage() {
             onChange={(event) => setNewKey(event.target.value)}
           />
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             type="text"
             required
             placeholder="display name"
@@ -348,21 +386,21 @@ export default function RolesPage() {
             onChange={(event) => setNewName(event.target.value)}
           />
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200 md:col-span-2"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm md:col-span-2"
             type="text"
             placeholder="description"
             value={newDescription}
             onChange={(event) => setNewDescription(event.target.value)}
           />
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200 md:col-span-2"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm md:col-span-2"
             type="text"
             placeholder="permissions comma separated (example: users:read,subscriptions:read)"
             value={newPermissionsText}
             onChange={(event) => setNewPermissionsText(event.target.value)}
           />
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200 md:col-span-2"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm md:col-span-2"
             type="text"
             placeholder="reason for creating this role"
             value={newReason}
@@ -372,7 +410,7 @@ export default function RolesPage() {
           <button
             type="submit"
             disabled={creating}
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {creating ? 'Creating...' : 'Create Role'}
           </button>
@@ -381,8 +419,8 @@ export default function RolesPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Role catalog</h2>
         </div>
 
@@ -393,7 +431,7 @@ export default function RolesPage() {
         ) : (
           <div className="overflow-x-auto -mx-1 px-1 sm:mx-0 sm:px-0">
             <table className="admin-table min-w-full text-left text-sm">
-              <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                 <tr>
                   <th className="px-5 py-3">Key</th>
                   <th className="px-5 py-3">Name</th>
@@ -405,10 +443,18 @@ export default function RolesPage() {
               </thead>
               <tbody>
                 {roles.map((role) => (
-                  <tr key={role.key} className="border-t border-slate-200/80 transition hover:bg-slate-50/80">
+                  <tr key={role.key} className="border-t border-slate-200 transition hover:bg-slate-50">
                     <td className="px-5 py-3 font-medium text-slate-800">{role.key}</td>
                     <td className="px-5 py-3 text-slate-700">{role.name}</td>
-                    <td className="px-5 py-3 text-slate-700">{role.isSystemRole ? 'System' : 'Custom'}</td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          role.isSystemRole ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-emerald-700'
+                        }`}
+                      >
+                        {role.isSystemRole ? 'System' : 'Custom'}
+                      </span>
+                    </td>
                     <td className="px-5 py-3 text-slate-700">{role.permissions?.length || 0}</td>
                     <td className="px-5 py-3 text-slate-500">{new Date(role.updatedAt).toLocaleString()}</td>
                     <td className="px-5 py-3">
@@ -420,7 +466,7 @@ export default function RolesPage() {
                             type="button"
                             onClick={() => void handleEditRole(role)}
                             disabled={updatingRoleKey === role.key || deletingRoleKey === role.key}
-                            className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {updatingRoleKey === role.key ? 'Updating...' : 'Edit'}
                           </button>
@@ -428,7 +474,7 @@ export default function RolesPage() {
                             type="button"
                             onClick={() => void handleDeleteRole(role)}
                             disabled={updatingRoleKey === role.key || deletingRoleKey === role.key}
-                            className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                           >
                             {deletingRoleKey === role.key ? 'Deleting...' : 'Delete'}
                           </button>
@@ -443,7 +489,7 @@ export default function RolesPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {roles.length === 0 ? 0 : skip + 1}-{skip + roles.length} of {total}
         </p>
@@ -452,7 +498,7 @@ export default function RolesPage() {
             type="button"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Previous
           </button>
@@ -460,7 +506,7 @@ export default function RolesPage() {
             type="button"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Next
           </button>

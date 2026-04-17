@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type NotificationRow = {
@@ -26,9 +26,9 @@ export default function NotificationsPage() {
   const [rows, setRows] = useState<NotificationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [actionFilter, setActionFilter] = useState('');
-  const [resourceFilter, setResourceFilter] = useState('');
-  const [onlyUnread, setOnlyUnread] = useState(false);
+  const [actionInput, setActionInput] = useState('');
+  const [resourceInput, setResourceInput] = useState('');
+  const [onlyUnreadInput, setOnlyUnreadInput] = useState(false);
   const [skip, setSkip] = useState(0);
   const [limit, setLimit] = useState(25);
   const [total, setTotal] = useState(0);
@@ -37,6 +37,7 @@ export default function NotificationsPage() {
   const [markingAll, setMarkingAll] = useState(false);
   const [markingId, setMarkingId] = useState('');
   const [groupByResource, setGroupByResource] = useState(true);
+  const [appliedQuery, setAppliedQuery] = useState({ action: '', resource: '', onlyUnread: false });
 
   const load = async () => {
     setLoading(true);
@@ -45,10 +46,10 @@ export default function NotificationsPage() {
       const params = new URLSearchParams({
         limit: String(limit),
         skip: String(skip),
-        unreadOnly: String(onlyUnread),
+        unreadOnly: String(appliedQuery.onlyUnread),
       });
-      if (actionFilter.trim()) params.set('action', actionFilter.trim());
-      if (resourceFilter.trim()) params.set('resource', resourceFilter.trim());
+      if (appliedQuery.action.trim()) params.set('action', appliedQuery.action.trim());
+      if (appliedQuery.resource.trim()) params.set('resource', appliedQuery.resource.trim());
 
       const response = await fetch(`/api/notifications?${params.toString()}`);
       const payload = await response.json();
@@ -113,18 +114,30 @@ export default function NotificationsPage() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (!raw) return;
       const parsed = JSON.parse(raw) as {
-        actionFilter?: string;
-        resourceFilter?: string;
-        onlyUnread?: boolean;
+        actionInput?: string;
+        resourceInput?: string;
+        onlyUnreadInput?: boolean;
         groupByResource?: boolean;
         limit?: number;
       };
 
-      if (typeof parsed.actionFilter === 'string') setActionFilter(parsed.actionFilter);
-      if (typeof parsed.resourceFilter === 'string') setResourceFilter(parsed.resourceFilter);
-      if (typeof parsed.onlyUnread === 'boolean') setOnlyUnread(parsed.onlyUnread);
+      if (typeof parsed.actionInput === 'string') {
+        setActionInput(parsed.actionInput);
+      }
+      if (typeof parsed.resourceInput === 'string') {
+        setResourceInput(parsed.resourceInput);
+      }
+      if (typeof parsed.onlyUnreadInput === 'boolean') {
+        setOnlyUnreadInput(parsed.onlyUnreadInput);
+      }
       if (typeof parsed.groupByResource === 'boolean') setGroupByResource(parsed.groupByResource);
       if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
+
+      setAppliedQuery({
+        action: typeof parsed.actionInput === 'string' ? parsed.actionInput : '',
+        resource: typeof parsed.resourceInput === 'string' ? parsed.resourceInput : '',
+        onlyUnread: typeof parsed.onlyUnreadInput === 'boolean' ? parsed.onlyUnreadInput : false,
+      });
     } catch {
       // Ignore invalid saved preferences
     }
@@ -134,12 +147,12 @@ export default function NotificationsPage() {
     try {
       window.localStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ actionFilter, resourceFilter, onlyUnread, groupByResource, limit })
+        JSON.stringify({ actionInput, resourceInput, onlyUnreadInput, groupByResource, limit })
       );
     } catch {
       // Ignore storage errors
     }
-  }, [actionFilter, resourceFilter, onlyUnread, groupByResource, limit]);
+  }, [actionInput, resourceInput, onlyUnreadInput, groupByResource, limit]);
 
   useEffect(() => {
     void load();
@@ -162,70 +175,112 @@ export default function NotificationsPage() {
       window.removeEventListener('focus', handleFocus);
       document.removeEventListener('visibilitychange', handleVisible);
     };
-  }, [skip, limit]);
+  }, [skip, limit, appliedQuery.action, appliedQuery.resource, appliedQuery.onlyUnread]);
 
-  const groupedRows = groupByResource
-    ? Array.from(
-        rows.reduce((map, row) => {
-          const key = row.resource || 'other';
-          const existing = map.get(key) || [];
-          existing.push(row);
-          map.set(key, existing);
-          return map;
-        }, new Map<string, NotificationRow[]>()).entries()
-      ).map(([label, items]) => ({ label, items }))
-    : [{ label: 'All notifications', items: rows }];
+  const applyFilters = () => {
+    setSkip(0);
+    setAppliedQuery({
+      action: actionInput.trim(),
+      resource: resourceInput.trim(),
+      onlyUnread: onlyUnreadInput,
+    });
+  };
+
+  const groupedRows = useMemo(
+    () =>
+      groupByResource
+        ? Array.from(
+            rows.reduce((map, row) => {
+              const key = row.resource || 'other';
+              const existing = map.get(key) || [];
+              existing.push(row);
+              map.set(key, existing);
+              return map;
+            }, new Map<string, NotificationRow[]>()).entries()
+          ).map(([label, items]) => ({ label, items }))
+        : [{ label: 'All notifications', items: rows }],
+    [rows, groupByResource]
+  );
+
+  const visibleEnd = rows.length === 0 ? 0 : skip + rows.length;
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Live signal center</span>
-          <h1 className="admin-title mt-4">Notifications</h1>
-          <p className="admin-subtitle">Live admin activity stream generated from database-changing operations.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Notifications</h1>
+          <p className="mt-2 text-base text-slate-600">
+            Track admin-side mutations in real time, isolate critical resources, and maintain response awareness.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <article className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Visible</p>
-            <p className="mt-2 font-display text-xl font-semibold text-slate-950">{rows.length}</p>
+        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visible</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{rows.length}</p>
           </article>
-          <article className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Unread</p>
-            <p className="mt-2 font-display text-xl font-semibold text-slate-950">{unreadTotal}</p>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Unread</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{unreadTotal}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Total</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{total}</p>
+          </article>
+          <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Groups</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">{groupedRows.length}</p>
           </article>
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-50 text-brand-700"><AdminIcon name="notifications" /></span>
-          <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <AdminIcon name="notifications" size={18} />
+          </span>
+          <div>
+            <h2 className="text-xl font-semibold text-slate-950">Filters</h2>
+            <p className="text-sm text-slate-500">Control visibility by action, resource, and unread state.</p>
+          </div>
         </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-5">
+
+        <div className="grid gap-2 md:grid-cols-6">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             placeholder="Action (example: users.update)"
-            value={actionFilter}
-            onChange={(event) => setActionFilter(event.target.value)}
+            value={actionInput}
+            onChange={(event) => setActionInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+              }
+            }}
           />
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             placeholder="Resource (example: subscriptions)"
-            value={resourceFilter}
-            onChange={(event) => setResourceFilter(event.target.value)}
+            value={resourceInput}
+            onChange={(event) => setResourceInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                applyFilters();
+              }
+            }}
           />
-          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm">
+
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm">
             <input
               type="checkbox"
-              checked={onlyUnread}
-              onChange={(event) => {
-                setOnlyUnread(event.target.checked);
-                setSkip(0);
-              }}
+              checked={onlyUnreadInput}
+              onChange={(event) => setOnlyUnreadInput(event.target.checked)}
             />
             Only unread
           </label>
-          <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 shadow-sm">
+
+          <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 shadow-sm">
             <input
               type="checkbox"
               checked={groupByResource}
@@ -233,8 +288,9 @@ export default function NotificationsPage() {
             />
             Group by resource
           </label>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={String(limit)}
             onChange={(event) => {
               setLimit(Number(event.target.value || 25));
@@ -246,22 +302,21 @@ export default function NotificationsPage() {
             <option value="50">50 / page</option>
             <option value="100">100 / page</option>
           </select>
+
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => {
-                setSkip(0);
-                void load();
-              }}
-              className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+              onClick={applyFilters}
+              className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             >
-              Refresh
+              <AdminIcon name="spark" size={14} />
+              Apply
             </button>
             <button
               type="button"
               onClick={() => void markAllRead()}
               disabled={markingAll || unreadTotal === 0}
-              className="admin-focus rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              className="admin-focus rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {markingAll ? 'Marking...' : 'Mark all read'}
             </button>
@@ -271,8 +326,8 @@ export default function NotificationsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Event stream</h2>
         </div>
 
@@ -285,9 +340,9 @@ export default function NotificationsPage() {
             {groupedRows.map((group) => (
               <section key={group.label} className="space-y-2">
                 {groupByResource ? <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-500">{group.label}</h3> : null}
-                <div className="overflow-x-auto rounded-2xl border border-slate-200/80">
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="admin-table min-w-full text-left text-sm">
-                    <thead className="bg-slate-50/90 text-xs uppercase tracking-wide text-slate-600">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
                       <tr>
                         <th className="px-5 py-3">Time</th>
                         <th className="px-5 py-3">Actor</th>
@@ -300,14 +355,19 @@ export default function NotificationsPage() {
                     <tbody>
                       {group.items.map((row) => {
                         const id = String(row._id || '').trim();
+                        const actor = row.actor?.email || '-';
                         return (
-                          <tr key={id || `${row.action}-${row.createdAt}`} className="border-t border-slate-200/80 align-top transition hover:bg-slate-50/80">
+                          <tr key={id || `${row.action}-${row.createdAt}`} className="border-t border-slate-200 align-top transition hover:bg-slate-50">
                             <td className="px-5 py-3 text-slate-500">{new Date(row.createdAt).toLocaleString()}</td>
                             <td className="px-5 py-3 text-slate-700">
-                              <div>{row.actor?.email || '-'}</div>
+                              <div className="font-medium text-slate-800">{actor}</div>
                               <div className="text-xs text-slate-500">{row.actor?.role || '-'}</div>
                             </td>
-                            <td className="px-5 py-3 font-medium text-slate-800">{row.action}</td>
+                            <td className="px-5 py-3">
+                              <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">
+                                {row.action}
+                              </span>
+                            </td>
                             <td className="px-5 py-3 text-slate-700">
                               {row.resource}
                               {row.resourceId ? `:${row.resourceId}` : ''}
@@ -322,7 +382,7 @@ export default function NotificationsPage() {
                                   type="button"
                                   onClick={() => void setReadState(row, true)}
                                   disabled={markingId === id}
-                                  className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   Mark read
                                 </button>
@@ -330,7 +390,7 @@ export default function NotificationsPage() {
                                   type="button"
                                   onClick={() => void setReadState(row, false)}
                                   disabled={markingId === id}
-                                  className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                  className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                   Mark unread
                                 </button>
@@ -348,16 +408,16 @@ export default function NotificationsPage() {
         )}
       </section>
 
-      <section className="flex items-center justify-between rounded-[28px] border border-slate-200 bg-white/88 px-5 py-4 shadow-sm">
+      <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
-          Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
+          Showing {rows.length === 0 ? 0 : skip + 1}-{visibleEnd} of {total}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Previous
           </button>
@@ -365,7 +425,7 @@ export default function NotificationsPage() {
             type="button"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
             Next
           </button>

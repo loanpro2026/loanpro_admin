@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 
 type PaymentRow = {
@@ -19,6 +19,7 @@ type PaymentRow = {
 
 const SUCCESS_STATUS_REGEX = /^(completed|captured|success|successful|paid)$/i;
 const FAILED_OR_PENDING_STATUS_REGEX = /^(failed|failure|error|declined|pending)$/i;
+const STORAGE_KEY = 'lp_admin_payments_table_v1';
 
 function isSuccessfulPayment(status: string | undefined) {
   return SUCCESS_STATUS_REGEX.test(String(status || '').trim());
@@ -30,8 +31,30 @@ function isFailedOrPendingPayment(status: string | undefined) {
   return FAILED_OR_PENDING_STATUS_REGEX.test(normalized);
 }
 
+function formatCurrency(amount?: number) {
+  return `INR ${Number(amount || 0).toLocaleString('en-IN')}`;
+}
+
+function statusTone(status: string | undefined) {
+  if (isSuccessfulPayment(status)) return 'bg-emerald-100 text-emerald-700';
+  if (isFailedOrPendingPayment(status)) return 'bg-amber-100 text-amber-700';
+  return 'bg-slate-100 text-slate-600';
+}
+
+function refundTone(status: string | undefined) {
+  const key = String(status || '').toLowerCase();
+  if (key === 'refunded') return 'bg-sky-100 text-sky-700';
+  if (['pending', 'requested'].includes(key)) return 'bg-amber-100 text-amber-700';
+  if (key) return 'bg-slate-100 text-slate-600';
+  return 'bg-slate-100 text-slate-500';
+}
+
+function formatDate(value?: string) {
+  if (!value) return '-';
+  return new Date(value).toLocaleString();
+}
+
 export default function PaymentsPage() {
-  const STORAGE_KEY = 'lp_admin_payments_table_v1';
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -89,18 +112,15 @@ export default function PaymentsPage() {
       if (parsed.sortDir === 'asc' || parsed.sortDir === 'desc') setSortDir(parsed.sortDir);
       if (typeof parsed.limit === 'number' && [10, 25, 50, 100].includes(parsed.limit)) setLimit(parsed.limit);
     } catch {
-      // Ignore invalid saved preferences
+      // Ignore invalid saved preferences.
     }
   }, []);
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ search, status, sortBy, sortDir, limit })
-      );
+      window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ search, status, sortBy, sortDir, limit }));
     } catch {
-      // Ignore storage errors
+      // Ignore storage errors.
     }
   }, [search, status, sortBy, sortDir, limit]);
 
@@ -133,8 +153,10 @@ export default function PaymentsPage() {
     return (window.prompt(`Reason for ${label}:`, '') || '').trim();
   };
 
-  const successfulRows = rows.filter((row) => isSuccessfulPayment(row.status));
-  const failedOrPendingRows = rows.filter((row) => !isSuccessfulPayment(row.status) || isFailedOrPendingPayment(row.status));
+  const successfulRows = useMemo(() => rows.filter((row) => isSuccessfulPayment(row.status)), [rows]);
+  const failedOrPendingRows = useMemo(() => rows.filter((row) => !isSuccessfulPayment(row.status) || isFailedOrPendingPayment(row.status)), [rows]);
+  const refundedRows = useMemo(() => rows.filter((row) => String(row.refundStatus || '').toLowerCase() === 'refunded'), [rows]);
+  const visibleAmount = useMemo(() => rows.reduce((sum, row) => sum + Number(row.amount || 0), 0), [rows]);
 
   const renderRows = (tableRows: PaymentRow[]) => {
     if (tableRows.length === 0) {
@@ -147,33 +169,43 @@ export default function PaymentsPage() {
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-600">
             <tr>
               <th className="px-5 py-3">Payment</th>
-              <th className="px-5 py-3">User</th>
+              <th className="px-5 py-3">Customer</th>
+              <th className="px-5 py-3">Plan</th>
               <th className="px-5 py-3">Amount</th>
               <th className="px-5 py-3">Status</th>
               <th className="px-5 py-3">Refund</th>
+              <th className="px-5 py-3">Created</th>
               <th className="px-5 py-3">Actions</th>
             </tr>
           </thead>
           <tbody>
             {tableRows.map((row) => (
-              <tr key={row._id} className="border-t border-slate-200">
-                <td className="px-5 py-3">
-                  <div className="font-medium text-slate-800">{row.paymentId || row._id}</div>
-                  <div className="text-xs text-slate-500">{row.orderId || '-'}</div>
+              <tr key={row._id} className="border-t border-slate-200 transition hover:bg-slate-50">
+                <td className="px-5 py-4">
+                  <div className="font-medium text-slate-900">{row.paymentId || row._id}</div>
+                  <div className="text-xs text-slate-500">Order: {row.orderId || '-'}</div>
                 </td>
-                <td className="px-5 py-3">
+                <td className="px-5 py-4">
                   <div className="text-slate-800">{row.userEmail || '-'}</div>
                   <div className="text-xs text-slate-500">{row.userId || '-'}</div>
                 </td>
-                <td className="px-5 py-3 text-slate-700">{typeof row.amount === 'number' ? `Rs ${row.amount}` : '-'}</td>
-                <td className="px-5 py-3 text-slate-700">{row.status || '-'}</td>
-                <td className="px-5 py-3 text-slate-700">{row.refundStatus || '-'}</td>
-                <td className="px-5 py-3">
+                <td className="px-5 py-4 text-slate-700 capitalize">{row.plan || '-'}</td>
+                <td className="px-5 py-4 text-slate-700">{formatCurrency(row.amount)}</td>
+                <td className="px-5 py-4">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${statusTone(row.status)}`}>
+                    {row.status || 'unknown'}
+                  </span>
+                </td>
+                <td className="px-5 py-4">
+                  <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${refundTone(row.refundStatus)}`}>
+                    {row.refundStatus || 'none'}
+                  </span>
+                </td>
+                <td className="px-5 py-4 text-slate-600">{formatDate(row.createdAt)}</td>
+                <td className="px-5 py-4">
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
-                      title="Mark for refund review"
-                      aria-label="Mark for refund review"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund review request');
@@ -187,14 +219,12 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Review
                     </button>
                     <button
                       type="button"
-                      title="Approve refund"
-                      aria-label="Approve refund"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('refund approval');
@@ -209,14 +239,12 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Approve
+                      Approve refund
                     </button>
                     <button
                       type="button"
-                      title="Reconcile payment"
-                      aria-label="Reconcile payment"
                       disabled={updatingId === row._id}
                       onClick={() => {
                         const reason = askReason('payment reconciliation');
@@ -230,7 +258,7 @@ export default function PaymentsPage() {
                           reason,
                         });
                       }}
-                      className="admin-focus rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                      className="admin-focus rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Reconcile
                     </button>
@@ -246,43 +274,58 @@ export default function PaymentsPage() {
 
   return (
     <main className="space-y-6 p-4 sm:p-6 lg:p-8">
-      <header className="grid gap-4 lg:grid-cols-1 lg:items-start xl:grid-cols-[1.08fr_0.92fr] xl:items-end">
+      <header className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
         <div className="max-w-3xl">
           <span className="admin-chip">Revenue operations</span>
-          <h1 className="admin-title mt-4">Payments</h1>
-          <p className="admin-subtitle">Monitor payment events and handle refund/reconciliation actions.</p>
+          <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-950">Payments</h1>
+          <p className="mt-2 text-base text-slate-600">
+            Payment monitoring, refund handling, and reconciliation in one unified operations view.
+          </p>
         </div>
-        <div className="grid gap-3 sm:grid-cols-3">
+
+        <div className="grid gap-3 sm:grid-cols-4 lg:justify-self-end">
           {[
             ['Total', String(total || rows.length)],
-            ['Visible', String(rows.length)],
-            ['Failed/Pending', String(failedOrPendingRows.length)],
+            ['Successful', String(successfulRows.length)],
+            ['Exceptions', String(failedOrPendingRows.length)],
+            ['Refunded', String(refundedRows.length)],
           ].map(([label, value]) => (
-            <article key={label} className="rounded-[22px] border border-slate-200 bg-white/88 p-4 shadow-sm">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-              <p className="mt-2 font-display text-xl font-semibold text-slate-950">{value}</p>
+            <article key={label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p>
             </article>
           ))}
         </div>
       </header>
 
-      <section className="rounded-[28px] border border-slate-200 bg-white/88 p-5 shadow-sm">
-        <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><AdminIcon name="payments" size={18} /></span>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-700">
+            <AdminIcon name="payments" size={18} />
+          </span>
           <div>
-            <h2 className="font-display text-xl font-semibold text-slate-950">Filters</h2>
-            <p className="text-xs text-slate-500">Search, sort, and isolate payment states.</p>
+            <h2 className="text-xl font-semibold text-slate-950">Filters</h2>
+            <p className="text-sm text-slate-500">Search and segment payment states for rapid operations.</p>
           </div>
         </div>
-        <div className="mt-4 grid gap-2 md:grid-cols-5">
+
+        <div className="grid gap-2 md:grid-cols-6">
           <input
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
-            placeholder="Search by payment/user/order"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            placeholder="Search payment, user, or order"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                setSkip(0);
+                void load();
+              }
+            }}
           />
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={status}
             onChange={(event) => {
               setStatus(event.target.value);
@@ -295,38 +338,56 @@ export default function PaymentsPage() {
             <option value="failed">Failed</option>
             <option value="refunded">Refunded</option>
           </select>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={sortBy}
             onChange={(event) => {
               setSortBy(event.target.value as 'createdAt' | 'updatedAt' | 'amount' | 'status');
               setSkip(0);
             }}
           >
-            <option value="createdAt">Created</option>
-            <option value="updatedAt">Updated</option>
-            <option value="amount">Amount</option>
-            <option value="status">Status</option>
+            <option value="createdAt">Sort by created</option>
+            <option value="updatedAt">Sort by updated</option>
+            <option value="amount">Sort by amount</option>
+            <option value="status">Sort by status</option>
           </select>
+
           <select
-            className="admin-focus rounded-2xl border border-slate-200 bg-white px-3 py-3 text-sm shadow-sm transition hover:border-brand-200"
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
             value={sortDir}
             onChange={(event) => {
               setSortDir(event.target.value as 'asc' | 'desc');
               setSkip(0);
             }}
           >
-            <option value="desc">Newest</option>
-            <option value="asc">Oldest</option>
+            <option value="desc">Descending</option>
+            <option value="asc">Ascending</option>
           </select>
+
+          <select
+            className="admin-focus rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm"
+            value={String(limit)}
+            onChange={(event) => {
+              setLimit(Number(event.target.value || 25));
+              setSkip(0);
+            }}
+          >
+            <option value="10">10 / page</option>
+            <option value="25">25 / page</option>
+            <option value="50">50 / page</option>
+            <option value="100">100 / page</option>
+          </select>
+
           <button
-            className="admin-focus rounded-2xl bg-gradient-to-r from-brand-600 to-cyan-500 px-4 py-3 text-sm font-semibold text-white shadow-glow transition hover:-translate-y-0.5"
+            className="admin-focus inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800"
             type="button"
             onClick={() => {
               setSkip(0);
               void load();
             }}
           >
+            <AdminIcon name="spark" size={14} />
             Apply
           </button>
         </div>
@@ -334,52 +395,54 @@ export default function PaymentsPage() {
 
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Visible value</p>
+          <p className="mt-2 text-3xl font-semibold text-slate-950">{formatCurrency(visibleAmount)}</p>
+          <p className="mt-2 text-sm text-slate-600">Sum of payment amounts in the current filtered view.</p>
+        </article>
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Operational note</p>
+          <p className="mt-2 text-sm text-slate-700">
+            Use Review before approval when refund context is unclear; all actions require reason capture for audit trail.
+          </p>
+        </article>
+      </section>
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Successful payments</h2>
         </div>
-
-        {loading ? (
-          <p className="px-5 py-3 text-sm text-slate-500">Loading payments...</p>
-        ) : (
-          renderRows(successfulRows)
-        )}
+        {loading ? <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p> : renderRows(successfulRows)}
       </section>
 
-      <section className="overflow-hidden rounded-[28px] border border-slate-200 bg-white/88 shadow-sm">
-        <div className="border-b border-slate-200/80 px-5 py-4">
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Failed and pending payments</h2>
         </div>
-
-        {loading ? (
-          <p className="px-5 py-3 text-sm text-slate-500">Loading payments...</p>
-        ) : (
-          renderRows(failedOrPendingRows)
-        )}
+        {loading ? <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p> : renderRows(failedOrPendingRows)}
       </section>
 
-      <section className="flex items-center justify-between admin-surface">
+      <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="text-sm text-slate-600">
           Showing {rows.length === 0 ? 0 : skip + 1}-{skip + rows.length} of {total}
         </p>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            title="Previous page"
             disabled={loading || skip === 0}
             onClick={() => setSkip((prev) => Math.max(0, prev - limit))}
-            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            ←
+            Previous
           </button>
           <button
             type="button"
-            title="Next page"
             disabled={loading || !hasMore}
             onClick={() => setSkip((prev) => prev + limit)}
-            className="admin-focus rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+            className="admin-focus rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            →
+            Next
           </button>
         </div>
       </section>
