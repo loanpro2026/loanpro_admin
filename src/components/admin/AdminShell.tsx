@@ -33,6 +33,7 @@ export function AdminShell({ children }: AdminShellProps) {
   const [sidebarSearch, setSidebarSearch] = useState('');
   const [sidebarCompact, setSidebarCompact] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [routeLoading, setRouteLoading] = useState(false);
 
   const systemChecks = useMemo(
     () => [
@@ -131,6 +132,10 @@ export function AdminShell({ children }: AdminShellProps) {
     }
   }, [sidebarCompact, collapsedGroups]);
 
+  useEffect(() => {
+    setRouteLoading(false);
+  }, [pathname]);
+
   const handleSidebarSearchSubmit = () => {
     if (filteredNavItems.length === 0) return;
     router.push(filteredNavItems[0].href);
@@ -142,6 +147,7 @@ export function AdminShell({ children }: AdminShellProps) {
 
   return (
     <div className="h-screen overflow-hidden bg-[#f7f7f8] text-slate-900">
+      {routeLoading ? <div className="admin-route-loader" aria-hidden="true" /> : null}
       <div className="flex h-full min-h-0 w-full">
         <aside className={`hidden h-full shrink-0 border-r border-slate-200 bg-[#f3f3f4] transition-[width] duration-300 ease-out motion-reduce:transition-none lg:flex lg:flex-col ${sidebarCompact ? 'w-[84px]' : 'w-[280px]'}`}>
           <div className={`flex min-h-[60px] items-center border-b border-slate-200 transition-all duration-200 motion-reduce:transition-none ${sidebarCompact ? 'justify-center px-2' : 'px-5'}`}>
@@ -211,6 +217,7 @@ export function AdminShell({ children }: AdminShellProps) {
                       <Link
                         key={item.key}
                         href={item.href}
+                        onClick={() => setRouteLoading(true)}
                         title={item.label}
                         className={`admin-focus group relative flex items-center gap-3 overflow-hidden rounded-xl px-3 py-2.5 text-[15px] font-medium transition ${
                           active
@@ -277,6 +284,7 @@ export function AdminShell({ children }: AdminShellProps) {
                   <Link
                     key={item.key}
                     href={item.href}
+                    onClick={() => setRouteLoading(true)}
                     className={`admin-focus inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-medium transition ${
                       active
                         ? 'border-slate-300 bg-white text-slate-900'

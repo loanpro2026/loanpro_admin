@@ -55,7 +55,7 @@ export function AdminNotificationsBell() {
     setLoading(true);
     setError('');
     try {
-      const response = await fetch('/api/notifications?limit=8', { cache: 'no-store' });
+      const response = await fetch('/api/notifications?limit=8&unreadOnly=true', { cache: 'no-store' });
       const payload = (await response.json()) as NotificationsPayload;
       if (!response.ok || !payload?.success) {
         throw new Error(payload?.error || 'Failed to load notifications');

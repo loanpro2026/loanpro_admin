@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type IntegrationRecord = {
   key: string;
@@ -146,7 +147,7 @@ export default function IntegrationsPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Checking integrations...</p>
+          <AdminInlineTableSkeleton rows={6} />
         ) : !payload || payload.data.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No integration data available.</p>
         ) : (
@@ -204,7 +205,7 @@ export default function IntegrationsPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading usage metrics...</p>
+          <AdminInlineTableSkeleton rows={6} />
         ) : !usagePayload || usagePayload.data.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No usage data available.</p>
         ) : (

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type PaymentRow = {
   _id: string;
@@ -413,14 +414,14 @@ export default function PaymentsPage() {
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Successful payments</h2>
         </div>
-        {loading ? <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p> : renderRows(successfulRows)}
+        {loading ? <AdminInlineTableSkeleton rows={6} /> : renderRows(successfulRows)}
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-600">Failed and pending payments</h2>
         </div>
-        {loading ? <p className="px-5 py-4 text-sm text-slate-500">Loading payments...</p> : renderRows(failedOrPendingRows)}
+        {loading ? <AdminInlineTableSkeleton rows={6} /> : renderRows(failedOrPendingRows)}
       </section>
 
       <section className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">

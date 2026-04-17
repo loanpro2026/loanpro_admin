@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type DeviceRow = {
   userId: string;
@@ -233,7 +234,7 @@ export default function DevicesPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading devices...</p>
+          <AdminInlineTableSkeleton rows={8} />
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No devices found.</p>
         ) : (

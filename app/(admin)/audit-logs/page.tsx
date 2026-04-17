@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type AuditLogRecord = {
   _id?: string;
@@ -288,7 +289,7 @@ export default function AuditLogsPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading audit logs...</p>
+          <AdminInlineTableSkeleton rows={8} />
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No audit events found.</p>
         ) : (

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type UserRow = {
   _id?: string;
@@ -417,7 +418,7 @@ export default function UsersPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading users...</p>
+          <AdminInlineTableSkeleton rows={8} />
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No users found.</p>
         ) : (

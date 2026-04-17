@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminCardGridSkeleton, AdminPanelSkeleton } from '@/components/admin/AdminLoading';
 
 type ProfilePayload = {
   clerkUserId: string;
@@ -114,7 +115,13 @@ export default function ProfilePage() {
       {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
 
       {loading ? (
-        <p className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">Loading profile...</p>
+        <>
+          <AdminCardGridSkeleton cards={3} />
+          <section className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
+            <AdminPanelSkeleton rows={7} />
+            <AdminPanelSkeleton rows={10} />
+          </section>
+        </>
       ) : profile ? (
         <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">

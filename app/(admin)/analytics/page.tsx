@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminCardGridSkeleton, AdminPanelSkeleton } from '@/components/admin/AdminLoading';
 
 type AnalyticsPayload = {
   totalUsers: number;
@@ -201,7 +202,18 @@ export default function AnalyticsPage() {
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       {loading ? (
-        <p className="admin-surface px-5 py-4 text-sm text-slate-500">Loading analytics...</p>
+        <>
+          <AdminCardGridSkeleton cards={4} />
+          <AdminPanelSkeleton rows={6} />
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <AdminPanelSkeleton rows={5} />
+            <AdminPanelSkeleton rows={5} />
+          </section>
+          <section className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <AdminPanelSkeleton rows={5} />
+            <AdminPanelSkeleton rows={5} />
+          </section>
+        </>
       ) : data ? (
         <>
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">

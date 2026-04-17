@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 import { CreateModal } from '@/components/admin/CreateModal';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 
 type SubscriptionRow = {
   _id: string;
@@ -494,7 +495,7 @@ export default function SubscriptionsPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading subscriptions...</p>
+          <AdminInlineTableSkeleton rows={8} />
         ) : rows.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No subscriptions found.</p>
         ) : (

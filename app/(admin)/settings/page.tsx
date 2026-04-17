@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminCardGridSkeleton, AdminPanelSkeleton } from '@/components/admin/AdminLoading';
 
 type SettingsPayload = {
   support: {
@@ -157,7 +158,10 @@ export default function SettingsPage() {
       {success ? <p className="admin-alert border-emerald-200 bg-emerald-50 text-emerald-700">{success}</p> : null}
 
       {loading ? (
-        <p className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">Loading settings...</p>
+        <>
+          <AdminCardGridSkeleton cards={3} />
+          <AdminPanelSkeleton rows={12} />
+        </>
       ) : (
         <form className="space-y-6" onSubmit={save}>
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

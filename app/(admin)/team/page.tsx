@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
 import { CreateModal } from '@/components/admin/CreateModal';
+import { AdminInlineTableSkeleton } from '@/components/admin/AdminLoading';
 import { ADMIN_ROLE_OPTIONS } from '@/constants/roles';
 import type { RoleKey } from '@/types/rbac';
 
@@ -458,7 +459,7 @@ export default function TeamPage() {
         </div>
 
         {loading ? (
-          <p className="px-5 py-4 text-sm text-slate-500">Loading team members...</p>
+          <AdminInlineTableSkeleton rows={8} />
         ) : members.length === 0 ? (
           <p className="px-5 py-4 text-sm text-slate-500">No admin users found yet.</p>
         ) : (

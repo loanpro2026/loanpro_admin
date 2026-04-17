@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { AdminIcon } from '@/components/admin/AdminIcons';
+import { AdminCardGridSkeleton, AdminPanelSkeleton } from '@/components/admin/AdminLoading';
 
 type StatusPayload = {
   generatedAt: string;
@@ -91,7 +92,13 @@ export default function StatusPage() {
       {error ? <p className="admin-alert border-red-200 bg-red-50 text-red-700">{error}</p> : null}
 
       {loading ? (
-        <p className="rounded-2xl border border-slate-200 bg-white px-5 py-4 text-sm text-slate-500 shadow-sm">Loading system status...</p>
+        <>
+          <AdminCardGridSkeleton cards={4} />
+          <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <AdminPanelSkeleton rows={6} />
+            <AdminPanelSkeleton rows={5} />
+          </section>
+        </>
       ) : data ? (
         <>
           <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
