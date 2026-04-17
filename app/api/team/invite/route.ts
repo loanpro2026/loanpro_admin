@@ -8,7 +8,7 @@ import { createTeamInvite } from '@/server/repositories/team';
 import { writeAuditLog } from '@/server/services/audit-log';
 import type { RoleKey } from '@/types/rbac';
 import { invalidateCacheByPrefix } from '@/server/services/response-cache';
-import { getTeamMemberByEmail, upsertTeamMemberFromIdentity } from '@/server/repositories/team';
+import { getPendingTeamInviteByEmail, getTeamMemberByEmail } from '@/server/repositories/team';
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -79,48 +79,57 @@ async function createClerkInvite(params: {
   return String(created.id || '').trim();
 }
 
-async function tryGrantExistingClerkUserAccess(params: {
+async function sendInviteReminderEmail(params: {
   email: string;
   role: RoleKey;
-  invitedBy: string;
+  redirectUrl: string;
+  appUrl: string;
+  reason: string;
 }) {
-  const client = await clerkClient();
-  const response = await client.users.getUserList({
-    emailAddress: [params.email],
-    limit: 1,
-  });
-
-  const rows = Array.isArray((response as { data?: unknown[] })?.data)
-    ? ((response as { data?: unknown[] }).data as Array<Record<string, unknown>>)
-    : [];
-  const user = rows[0];
-  if (!user) {
-    return null;
+  const env = getEnv();
+  const brevoKey = String(env.BREVO_API_KEY || '').trim();
+  if (!brevoKey) {
+    throw new Error('BREVO_API_KEY is not configured for email resend fallback');
   }
 
-  const clerkUserId = String(user.id || '').trim();
-  const firstName = String(user.firstName || '').trim();
-  const lastName = String(user.lastName || '').trim();
-  const username = String(user.username || '').trim();
-  const displayName = [firstName, lastName].filter(Boolean).join(' ') || username || params.email;
+  const fromEmail = String(env.ADMIN_FROM_EMAIL || 'admin@loanpro.tech').trim().toLowerCase();
+  const roleLabel = String(params.role || 'viewer').replace(/_/g, ' ');
+  const signInUrl = `${params.appUrl.replace(/\/$/, '')}/sign-in`;
 
-  if (!clerkUserId) {
-    return null;
-  }
-
-  const adminUser = await upsertTeamMemberFromIdentity({
-    clerkUserId,
-    email: params.email,
-    displayName,
-    role: params.role,
-    invitedBy: params.invitedBy,
+  const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'api-key': brevoKey,
+    },
+    body: JSON.stringify({
+      sender: { name: 'LoanPro Admin', email: fromEmail },
+      to: [{ email: params.email }],
+      subject: 'LoanPro Admin Invite Reminder',
+      htmlContent: `
+        <p>You have an active invite request for <strong>LoanPro Admin</strong>.</p>
+        <p>Assigned role: <strong>${roleLabel}</strong></p>
+        <p>Invite note: ${params.reason}</p>
+        <p>Please sign in to continue:</p>
+        <p><a href="${signInUrl}">${signInUrl}</a></p>
+        <p>If prompted, continue with the same email account: <strong>${params.email}</strong>.</p>
+      `,
+      textContent: `You have an active LoanPro Admin invite request. Assigned role: ${roleLabel}. Invite note: ${params.reason}. Sign in here: ${signInUrl}. Use email: ${params.email}`,
+    }),
   });
 
-  return {
-    clerkUserId,
-    displayName,
-    adminUser,
-  };
+  if (!response.ok) {
+    let details = '';
+    try {
+      const json = await response.json();
+      details = String((json as { message?: string })?.message || '').trim();
+    } catch {
+      // Ignore parse errors
+    }
+    throw new Error(details || `Brevo email API failed (${response.status})`);
+  }
+
+  return fromEmail;
 }
 
 async function resendAfterRevokingExistingInvite(email: string, role: string, redirectUrl: string) {
@@ -174,7 +183,69 @@ export async function POST(request: NextRequest) {
   }
 
   const env = getEnv();
+  const appUrl = env.NEXT_PUBLIC_APP_URL;
   const redirectUrl = env.ADMIN_INVITE_REDIRECT_URL || `${env.NEXT_PUBLIC_APP_URL}/sign-in`;
+  const fromEmail = String(env.ADMIN_FROM_EMAIL || 'admin@loanpro.tech').trim().toLowerCase();
+
+  const existingPendingInvite = await getPendingTeamInviteByEmail(normalizedEmail);
+  if (existingPendingInvite) {
+    const refreshedInvite = await createTeamInvite({
+      email: normalizedEmail,
+      role: parsed.data.role as RoleKey,
+      invitedBy: result.session.clerkUserId,
+    });
+
+    try {
+      await sendInviteReminderEmail({
+        email: normalizedEmail,
+        role: parsed.data.role,
+        redirectUrl,
+        appUrl,
+        reason: parsed.data.reason,
+      });
+    } catch (emailError) {
+      const reason = toErrorMessage(emailError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: `Invite exists in storage, but reminder email from ${fromEmail} failed: ${reason}`,
+        },
+        { status: 502 }
+      );
+    }
+
+    await writeAuditLog({
+      actor: result.session,
+      action: 'team.invite_resent',
+      resource: 'team',
+      resourceId: normalizedEmail,
+      reason: parsed.data.reason,
+      after: {
+        email: refreshedInvite.email,
+        role: refreshedInvite.role,
+        status: refreshedInvite.status,
+        expiresAt: refreshedInvite.expiresAt,
+        channel: 'admin-reminder-email',
+      },
+    });
+
+    invalidateCacheByPrefix('team:list:');
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          email: refreshedInvite.email,
+          role: refreshedInvite.role,
+          status: refreshedInvite.status,
+          expiresAt: refreshedInvite.expiresAt,
+          clerkInvitationId: null,
+          message: `Existing invite found in storage and reminder email sent from ${fromEmail}.`,
+        },
+      },
+      { status: 201 }
+    );
+  }
 
   let clerkInvitationId = '';
   let inviteMessage = 'Invitation email sent successfully';
@@ -211,49 +282,21 @@ export async function POST(request: NextRequest) {
 
         if (resendCode.includes('unprocessable') || resendReason.toLowerCase().includes('unprocessable')) {
           try {
-            const granted = await tryGrantExistingClerkUserAccess({
+            await sendInviteReminderEmail({
               email: normalizedEmail,
               role: parsed.data.role,
-              invitedBy: result.session.clerkUserId,
+              redirectUrl,
+              appUrl,
+              reason: parsed.data.reason,
             });
-
-            if (granted) {
-              await writeAuditLog({
-                actor: result.session,
-                action: 'team.invite_existing_user_granted',
-                resource: 'team',
-                resourceId: normalizedEmail,
-                reason: parsed.data.reason,
-                after: {
-                  email: normalizedEmail,
-                  role: parsed.data.role,
-                  clerkUserId: granted.clerkUserId,
-                  mode: 'direct-access',
-                },
-              });
-
-              invalidateCacheByPrefix('team:list:');
-
-              return NextResponse.json(
-                {
-                  success: true,
-                  data: {
-                    email: normalizedEmail,
-                    role: parsed.data.role,
-                    status: 'active',
-                    message:
-                      'This email already has a Clerk account. Admin access has been granted directly; ask the user to sign in now.',
-                  },
-                },
-                { status: 201 }
-              );
-            }
+            clerkInvitationId = '';
+            inviteMessage = 'Invite reminder email sent successfully.';
           } catch (grantError) {
             const grantReason = toErrorMessage(grantError);
             return NextResponse.json(
               {
                 success: false,
-                error: `Automatic resend failed and direct access fallback failed: ${grantReason}`,
+                error: `Automatic resend failed, and reminder email fallback failed: ${grantReason}`,
               },
               { status: 502 }
             );

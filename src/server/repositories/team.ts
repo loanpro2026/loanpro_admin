@@ -70,19 +70,46 @@ export async function createTeamInvite(input: { email: string; role: RoleKey; in
   const token = crypto.randomBytes(24).toString('hex');
   const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
 
-  const doc: AdminInviteDocument = {
-    email: input.email.toLowerCase(),
-    role: input.role,
-    invitedBy: input.invitedBy,
-    status: 'pending',
-    tokenHash,
-    expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-    createdAt: now,
-    updatedAt: now,
-  };
+  const email = input.email.toLowerCase();
+  const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-  await db.collection<AdminInviteDocument>('admin_invites').insertOne(doc);
-  return { ...doc, inviteToken: token };
+  const updated = await db.collection<AdminInviteDocument>('admin_invites').findOneAndUpdate(
+    { email, status: 'pending' },
+    {
+      $set: {
+        role: input.role,
+        invitedBy: input.invitedBy,
+        tokenHash,
+        expiresAt,
+        updatedAt: now,
+      },
+      $setOnInsert: {
+        email,
+        status: 'pending',
+        createdAt: now,
+      },
+    },
+    {
+      upsert: true,
+      returnDocument: 'after',
+    }
+  );
+
+  if (!updated) {
+    const doc: AdminInviteDocument = {
+      email,
+      role: input.role,
+      invitedBy: input.invitedBy,
+      status: 'pending',
+      tokenHash,
+      expiresAt,
+      createdAt: now,
+      updatedAt: now,
+    };
+    return { ...doc, inviteToken: token };
+  }
+
+  return { ...updated, inviteToken: token };
 }
 
 export async function updateTeamMember(adminUserId: string, patch: Partial<Pick<AdminUserDocument, 'role' | 'status'>>) {
@@ -119,6 +146,17 @@ export async function getTeamMemberByEmail(email: string) {
   if (!normalizedEmail) return null;
 
   return db.collection<AdminUserDocument>('admin_users').findOne({ email: normalizedEmail });
+}
+
+export async function getPendingTeamInviteByEmail(email: string) {
+  const db = await getAdminDb();
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  if (!normalizedEmail) return null;
+
+  return db.collection<AdminInviteDocument>('admin_invites').findOne({
+    email: normalizedEmail,
+    status: 'pending',
+  });
 }
 
 export async function countActiveSuperAdmins() {

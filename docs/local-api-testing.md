@@ -59,9 +59,12 @@ Invoke-RestMethod -Method GET -Uri "http://localhost:3000/api/integrations/usage
 	- `CLERK_SECRET_KEY`
 	- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 	- Optional but recommended: `ADMIN_INVITE_REDIRECT_URL` (must match allowed redirect URLs in Clerk dashboard).
+	- Optional fallback sender settings for resend reminder emails:
+		- `BREVO_API_KEY`
+		- `ADMIN_FROM_EMAIL` (verified sender in Brevo)
 - Expected behavior:
 	- Invite returns `201` only when Clerk invitation email creation succeeds.
-	- Invite returns `502` with an explicit message when upstream Clerk delivery fails.
+	- If Clerk refuses resend for existing invite/user, API attempts reminder email fallback via Brevo and still returns `201` on successful fallback.
 
 ## 7) Team invite troubleshooting checklist
 1. Verify `CLERK_SECRET_KEY` is present in runtime env.

@@ -15,6 +15,7 @@ const envSchema = z.object({
   CLERK_SIGN_IN_URL: z.string().default('/sign-in'),
   CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: z.string().default('/dashboard'),
   ADMIN_INVITE_REDIRECT_URL: z.string().url().optional(),
+  ADMIN_FROM_EMAIL: z.string().email().optional(),
   ADMIN_INIT_SECRET: z.string().optional(),
   ADMIN_DEV_BYPASS_KEY: z.string().optional(),
   BREVO_API_KEY: z.string().optional(),
