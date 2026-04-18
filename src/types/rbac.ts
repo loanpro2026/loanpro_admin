@@ -1,5 +1,6 @@
 export type RoleKey =
   | 'super_admin'
+  | 'admin'
   | 'admin_ops'
   | 'support_agent'
   | 'finance_admin'

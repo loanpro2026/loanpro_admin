@@ -2,6 +2,7 @@ import type { Permission, RoleKey } from '@/types/rbac';
 
 export const ROLE_KEYS: RoleKey[] = [
   'super_admin',
+  'admin',
   'admin_ops',
   'support_agent',
   'finance_admin',
@@ -20,6 +21,20 @@ export const ROLE_PERMISSIONS: Record<RoleKey, Permission[]> = {
     'contact:read', 'contact:assign', 'contact:close', 'contact:export',
     'integrations:read', 'integrations:test', 'integrations:reconfigure',
     'team:read', 'team:invite', 'team:role_assign', 'team:deactivate',
+    'roles:read', 'roles:create', 'roles:update', 'roles:delete',
+    'settings:read', 'settings:update',
+    'audit:read', 'audit:export',
+  ],
+  admin: [
+    'users:read', 'users:create', 'users:update', 'users:delete', 'users:suspend', 'users:export',
+    'coupons:read', 'coupons:create', 'coupons:update', 'coupons:delete', 'coupons:export',
+    'subscriptions:read', 'subscriptions:create', 'subscriptions:update', 'subscriptions:cancel', 'subscriptions:renew', 'subscriptions:upgrade', 'subscriptions:export',
+    'payments:read', 'payments:refund_request', 'payments:refund_approve', 'payments:reconcile', 'payments:export',
+    'devices:read', 'devices:bind', 'devices:revoke', 'devices:switch_approve',
+    'support:read', 'support:reply', 'support:assign', 'support:close', 'support:escalate',
+    'contact:read', 'contact:assign', 'contact:close', 'contact:export',
+    'integrations:read', 'integrations:test',
+    'team:read',
     'roles:read', 'roles:create', 'roles:update', 'roles:delete',
     'settings:read', 'settings:update',
     'audit:read', 'audit:export',

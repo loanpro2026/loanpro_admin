@@ -12,7 +12,7 @@ import { getPendingTeamInviteByEmail, getTeamMemberByEmail } from '@/server/repo
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(['super_admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']),
+  role: z.enum(['super_admin', 'admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']),
   reason: z.string().min(3).max(240),
 });
 

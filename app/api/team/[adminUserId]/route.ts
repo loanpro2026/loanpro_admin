@@ -8,7 +8,7 @@ import { hasPermission } from '@/lib/rbac/permissions';
 import { invalidateCacheByPrefix } from '@/server/services/response-cache';
 
 const teamPatchSchema = z.object({
-  role: z.enum(['super_admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']).optional(),
+  role: z.enum(['super_admin', 'admin', 'admin_ops', 'support_agent', 'finance_admin', 'analyst', 'viewer']).optional(),
   status: z.enum(['active', 'inactive', 'deactivated']).optional(),
   reason: z.string().min(3).max(240),
 });
